@@ -73,6 +73,10 @@ export async function runSync(): Promise<SyncResult> {
 				janCode: item.janCode,
 				releaseDate: item.releaseDate,
 			})),
+			{
+				markMissingOutOfStock: false,
+				transactionTimeoutMs: 60_000,
+			},
 		);
 
 		await finishSyncLog({

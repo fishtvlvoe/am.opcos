@@ -19,10 +19,14 @@ describe("batched sync contract", () => {
 		expect(syncSource).toContain("setSyncCursor");
 		expect(syncSource).toContain("ANISMILE_SYNC_BATCH_SIZE");
 		expect(syncSource).toContain("ANISMILE_SYNC_DELAY_MS");
+		expect(syncSource).toContain("markMissingOutOfStock: false");
+		expect(syncSource).toContain("transactionTimeoutMs: 60_000");
 		expect(syncSource).toContain("Math.min(parsePositiveInteger(process.env.ANISMILE_SYNC_BATCH_SIZE, 250), 500)");
 		expect(crawlerSource).toContain("offset = 0");
 		expect(crawlerSource).toContain("limit");
 		expect(crawlerSource).toContain("allProductIds.slice(safeOffset, safeOffset + safeLimit)");
+		expect(querySource).toContain("markMissingOutOfStock = true");
+		expect(querySource).toContain("timeout: transactionTimeoutMs");
 		expect(querySource).toContain("const SYNC_CURSOR_KEY = \"sync.cursor\"");
 	});
 });

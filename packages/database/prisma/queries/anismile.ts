@@ -407,7 +407,14 @@ export async function listSyncLogs(limit = 20) {
 	});
 }
 
-export async function upsertProductsFromSync(products: ProductSyncInput[]) {
+export async function upsertProductsFromSync(
+	products: ProductSyncInput[],
+	options: {
+		markMissingOutOfStock?: boolean;
+		transactionTimeoutMs?: number;
+	} = {},
+) {
+	const { markMissingOutOfStock = true, transactionTimeoutMs = 60_000 } = options;
 	const defaultMarkup = await getDefaultMarkup();
 	const now = new Date();
 	const supplierIds = products.map((item) => item.supplierId);
@@ -508,18 +515,20 @@ export async function upsertProductsFromSync(products: ProductSyncInput[]) {
 			}
 		}
 
-		const skippedResult = await tx.anismileProduct.updateMany({
-			where: {
-				supplierId: {
-					notIn: supplierIds.length > 0 ? supplierIds : ["__none__"],
+		if (markMissingOutOfStock) {
+			const skippedResult = await tx.anismileProduct.updateMany({
+				where: {
+					supplierId: {
+						notIn: supplierIds.length > 0 ? supplierIds : ["__none__"],
+					},
 				},
-			},
-			data: {
-				inStock: false,
-			},
-		});
-		productsSkipped = skippedResult.count;
-	});
+				data: {
+					inStock: false,
+				},
+			});
+			productsSkipped = skippedResult.count;
+		}
+	}, { timeout: transactionTimeoutMs, maxWait: 10_000 });
 
 	return {
 		productsSynced: products.length,
