@@ -28,11 +28,24 @@ const getLocaleFromRequest = (request?: Request) => {
 	return (cookies[i18nConfig.localeCookieName] as Locale) ?? i18nConfig.defaultLocale;
 };
 
-const appUrl = getBaseUrl(process.env.NEXT_PUBLIC_SAAS_URL, 3000);
+const cleanEnv = (value: string | undefined) => {
+	const trimmed = value?.trim();
+	return trimmed || undefined;
+};
+
+const appUrl = getBaseUrl(cleanEnv(process.env.NEXT_PUBLIC_SAAS_URL), 3000);
+const authUrl = new URL("/api/auth", appUrl).toString();
+const trustedOrigins = [
+	appUrl,
+	cleanEnv(process.env.NEXT_PUBLIC_OPCOS_URL),
+].filter((origin): origin is string => Boolean(origin));
+const authCookieDomain = cleanEnv(process.env.AUTH_COOKIE_DOMAIN);
 
 export const auth = betterAuth({
-	baseURL: appUrl,
-	trustedOrigins: [appUrl],
+	baseURL: authUrl,
+	basePath: "/api/auth",
+	secret: cleanEnv(process.env.BETTER_AUTH_SECRET),
+	trustedOrigins: Array.from(new Set(trustedOrigins)),
 	database: prismaAdapter(db, {
 		provider: "postgresql",
 	}),
@@ -40,11 +53,11 @@ export const auth = betterAuth({
 		database: {
 			generateId: false,
 		},
-		...(process.env.AUTH_COOKIE_DOMAIN
+		...(authCookieDomain
 			? {
 					crossSubDomainCookies: {
 						enabled: true,
-						domain: process.env.AUTH_COOKIE_DOMAIN,
+						domain: authCookieDomain,
 					},
 				}
 			: {}),
