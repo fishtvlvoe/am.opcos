@@ -15,6 +15,11 @@ describe("HomePage 頁面結構", () => {
 		expect(source).toContain("AnnouncementBanner");
 	});
 
+	it("首頁提供 AnnouncementBanner 使用手冊連結", () => {
+		const source = read(filePath);
+		expect(source).toContain('<AnnouncementBanner helpUrl="#" />');
+	});
+
 	it("包含 CategoryNav 元件引用", () => {
 		const source = read(filePath);
 		expect(source).toContain("CategoryNav");
@@ -32,9 +37,35 @@ describe("HomePage 頁面結構", () => {
 		expect(source).toContain("商品系列");
 	});
 
-	it("首頁 banner 使用原站 banner API，不依賴商品卡替代", () => {
+	it("首頁不渲染 Breadcrumb", () => {
 		const source = read(filePath);
-		expect(source).toContain("getBanners");
-		expect(source).toContain("BannerCarousel");
+		expect(source).not.toContain("function Breadcrumb");
+		expect(source).not.toContain("<Breadcrumb />");
+	});
+
+	it("日期 Tab 使用中文上架格式", () => {
+		const source = read(filePath);
+		expect(source).toContain("date-fns");
+		expect(source).toContain("M月d日上架");
+		expect(source).not.toContain("{date.display}");
+	});
+
+	it("商品系列的查看更多在標題列右側並連到搜尋頁", () => {
+		const source = read(filePath);
+		expect(source).toContain('href="/search"');
+		expect(source).toContain("» 查看更多");
+		expect(source).not.toContain("查看更多 »");
+	});
+
+	it("首頁使用三欄 FranchiseBanner 取代單張 BannerCarousel", () => {
+		const source = read(filePath);
+		expect(source).toContain("FranchiseBanner");
+		expect(source).toContain("franchiseBannerItems");
+		expect(source).toContain("dateIndex: 0");
+		expect(source).toContain("limit: 6");
+		expect(source).not.toContain("function BannerCarousel");
+		expect(source).not.toContain("<BannerCarousel />");
+		expect(source).not.toContain("useEmblaCarousel");
+		expect(source).not.toContain("Autoplay");
 	});
 });

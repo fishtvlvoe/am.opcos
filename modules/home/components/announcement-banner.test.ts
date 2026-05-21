@@ -39,4 +39,12 @@ describe("AnnouncementBanner 元件", () => {
 		const source = read(filePath);
 		expect(source).toContain("每日上新");
 	});
+
+	it("接受 helpUrl prop 並在右側顯示使用手冊連結", () => {
+		const source = read(filePath);
+		expect(source).toContain("helpUrl?: string");
+		expect(source).toContain("▸ 使用手冊");
+		expect(source).toContain('target="_blank"');
+		expect(source).toContain('rel="noopener noreferrer"');
+	});
 });
