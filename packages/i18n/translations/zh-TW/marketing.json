@@ -1,0 +1,154 @@
+{
+	"blog": {
+		"description": "閱讀我們公司的最新消息",
+		"title": "我很棒的博客",
+		"back": "返回博客"
+	},
+	"changelog": {
+		"description": "隨時了解我們產品的最新變化。",
+		"title": "變更日誌"
+	},
+	"contact": {
+		"description": "我們隨時為您提供協助。請使用下面的表格與我們聯絡。",
+		"form": {
+			"email": "電子郵件",
+			"message": "訊息",
+			"name": "姓名",
+			"notifications": {
+				"error": "很抱歉，我們無法發送您的訊息。請稍後重試。",
+				"success": "您的訊息已成功發送。我們會盡快回覆您。"
+			},
+			"submit": "發送訊息"
+		},
+		"title": "聯絡我們"
+	},
+	"documentation": {
+		"title": "文件"
+	},
+	"faq": {
+		"description": "您還有什麼疑問嗎？我們已經為您提供了保障。",
+		"title": "常見問題",
+		"items": {
+			"refundPolicy": {
+				"question": "退款政策是什麼？",
+				"answer": "如果您對我們的產品不滿意，我們提供 30 天退款保證。"
+			},
+			"cancelSubscription": {
+				"question": "我該如何取消我的訂閱？",
+				"answer": "您可以透過造訪計費頁面取消訂閱。"
+			},
+			"changePlan": {
+				"question": "我可以改變我的計劃嗎？",
+				"answer": "是的，您可以隨時造訪計費頁面變更您的方案。"
+			},
+			"freeTrial": {
+				"question": "你們有提供免費試用嗎？",
+				"answer": "是的，我們提供 14 天免費試用。"
+			}
+		}
+	},
+	"home": {
+		"hero": {
+			"new": "新的：",
+			"featureBadge": "SaaS 的驚人功能",
+			"title": "使用 Next.js 建構的革命性 SaaS",
+			"subtitle": "這是一個使用 supastarter 建立的演示應用程式。它將為您節省建造下一個 SaaS 的大量時間和精力。",
+			"getStarted": "開始使用",
+			"documentation": "文件",
+			"imageAlt": "我們的應用",
+			"builtWith": "使用這些很棒的工具來建立和交付"
+		},
+		"features": {
+			"badge": "令人難以置信的功能",
+			"title": "您的客戶會喜歡的功能",
+			"description": "在本部分中，您可以展示 SaaS 提供的所有功能以及它們如何使您的客戶受益。",
+			"feature1": {
+				"title": "特點1",
+				"subtitle": "利用我們出色的 SaaS 做更多事情。",
+				"description": "這是一個出色的功能。下面您可以看到一些原因。這基本上只是一個虛擬文字。",
+				"benefit1": {
+					"title": "好處1",
+					"description": "這是一個很棒的好處。下面您可以看到一些原因。這基本上只是一個虛擬文字。"
+				},
+				"benefit2": {
+					"title": "好處2",
+					"description": "這是一個很棒的好處。下面您可以看到一些原因。這基本上只是一個虛擬文字。"
+				},
+				"benefit3": {
+					"title": "好處3",
+					"description": "這是一個很棒的好處。下面您可以看到一些原因。這基本上只是一個虛擬文字。"
+				}
+			},
+			"feature2": {
+				"title": "特點2",
+				"subtitle": "您的 SaaS 也可以做到這一點。",
+				"description": "另一個功能的另一個虛擬文字。",
+				"benefit1": {
+					"title": "好處1",
+					"description": "這是一個很棒的好處。下面您可以看到一些原因。這基本上只是一個虛擬文字。"
+				},
+				"benefit2": {
+					"title": "好處2",
+					"description": "這是一個很棒的好處。下面您可以看到一些原因。這基本上只是一個虛擬文字。"
+				},
+				"benefit3": {
+					"title": "好處3",
+					"description": "這是一個很棒的好處。下面您可以看到一些原因。這基本上只是一個虛擬文字。"
+				}
+			}
+		}
+	},
+	"newsletter": {
+		"email": "電子郵件",
+		"hints": {
+			"error": {
+				"message": "無法訂閱電子報。請稍後重試。"
+			},
+			"success": {
+				"message": "感謝您訂閱我們的電子報。我們會及時通知您。",
+				"title": "已訂閱"
+			}
+		},
+		"submit": "訂閱",
+		"subtitle": "成為第一批造訪supastarter.nextjs 的人。",
+		"title": "搶先體驗"
+	},
+	"notFound": {
+		"code": "404",
+		"title": "找不到頁面",
+		"goToDashboard": "轉到儀表板",
+		"goToHomepage": "前往首頁"
+	},
+	"common": {
+		"footer": {
+			"blog": "部落格",
+			"features": "特徵",
+			"pricing": "定價",
+			"privacyPolicy": "隱私權政策",
+			"termsAndConditions": "條款與條件",
+			"builtWith": "使用超級啟動器構建"
+		},
+		"menu": {
+			"blog": "部落格",
+			"changelog": "變更日誌",
+			"contact": "接觸",
+			"dashboard": "儀表板",
+			"docs": "文件",
+			"faq": "FAQ",
+			"login": "登入",
+			"pricing": "定價"
+		},
+		"aria": {
+			"menu": "選單",
+			"language": "語言"
+		},
+		"tableOfContents": {
+			"title": "在此頁面上"
+		},
+		"colorMode": {
+			"system": "系統",
+			"light": "光",
+			"dark": "黑暗的"
+		}
+	}
+}

@@ -1,0 +1,61 @@
+{
+	"pricing": {
+		"choosePlan": "選擇計劃",
+		"contactSales": "聯繫銷售人員",
+		"description": "選擇最適合您的方案。",
+		"getStarted": "開始使用",
+		"month": "{count, plural, one {month} other {{count} months}}",
+		"monthly": "每月",
+		"products": {
+			"basic": {
+				"description": "非常適合小型團隊。",
+				"features": {
+					"anotherFeature": "另一個驚人的功能",
+					"limitedSupport": "支持有限"
+				},
+				"title": "基本的"
+			},
+			"enterprise": {
+				"description": "根據您的要求定制計劃",
+				"features": {
+					"enterpriseSupport": "企業支持",
+					"unlimitedProjects": "無限項目"
+				},
+				"title": "企業"
+			},
+			"free": {
+				"description": "免費開始",
+				"features": {
+					"anotherFeature": "另一個驚人的功能",
+					"limitedSupport": "支持有限"
+				},
+				"title": "自由的"
+			},
+			"lifetime": {
+				"description": "買一次。永遠使用。",
+				"features": {
+					"extendSupport": "擴充支援",
+					"noRecurringCosts": "無經常性費用"
+				},
+				"title": "壽命"
+			},
+			"pro": {
+				"description": "最適合團隊",
+				"features": {
+					"anotherFeature": "另一個驚人的功能",
+					"fiveMembers": "最多 5 名成員",
+					"fullSupport": "全力支持"
+				},
+				"title": "專業版"
+			}
+		},
+		"purchase": "購買",
+		"recommended": "受到推崇的",
+		"subscribe": "訂閱",
+		"title": "定價",
+		"trialPeriod": "{days} {days, plural, one {day} other {days}} 免費試用",
+		"year": "{count, plural, one {year} other {{count} years}}",
+		"yearly": "每年",
+		"perSeat": "座位"
+	}
+}

@@ -1,0 +1,38 @@
+{
+	"extends": "@repo/tsconfig/nextjs.json",
+	"compilerOptions": {
+		"plugins": [{ "name": "next" }],
+		"paths": {
+			"@config": ["./config"],
+			"@auth/*": ["./modules/auth/*"],
+			"@shared/*": ["./modules/shared/*"],
+			"@products/*": ["./modules/products/*"],
+			"@cart/*": ["./modules/cart/*"],
+			"@checkout/*": ["./modules/checkout/*"],
+			"@orders/*": ["./modules/orders/*"],
+			"@admin/*": ["./modules/admin/*"]
+		}
+	},
+	"include": [
+		"next-env.d.ts",
+		"app/**/*.ts",
+		"app/**/*.tsx",
+		"modules/**/*.ts",
+		"modules/**/*.tsx",
+		"config.ts",
+		"types.ts",
+		"next.config.ts",
+		"postcss.config.cjs",
+		".next/types/**/*.ts"
+	],
+	"exclude": [
+		"node_modules",
+		"packages/flowgo-*",
+		"packages/fishkit-*",
+		"packages/puppeteer",
+		"**/*.test.ts",
+		"**/*.test.tsx",
+		"**/__tests__/**",
+		"**/vitest.config.ts"
+	]
+}

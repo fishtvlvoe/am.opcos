@@ -1,0 +1,38 @@
+{
+	"common": {
+		"openLinkInBrowser": "如果您想在預設瀏覽器之外的其他瀏覽器中開啟該鏈接，請複製並貼上此連結：",
+		"otp": "免洗密碼",
+		"useLink": "或使用以下連結："
+	},
+	"emailVerification": {
+		"body": "嘿，\n請點擊下面的連結來驗證這個新的電子郵件地址。",
+		"confirmEmail": "驗證電子郵件",
+		"subject": "驗證您的電子郵件"
+	},
+	"forgotPassword": {
+		"body": "嘿，\n您請求重置密碼。\n\n點擊下面的按鈕重設您的密碼。",
+		"resetPassword": "重設密碼",
+		"subject": "重設您的密碼"
+	},
+	"magicLink": {
+		"body": "嘿，\n您向 superstarter 要求了登入電子郵件。\n\n點擊下面的連結登入。",
+		"login": "登入",
+		"subject": "登入超級啟動器"
+	},
+	"newUser": {
+		"body": "嘿，\n感謝您註冊 superstarter。\n\n要開始使用我們的應用程序，請點擊下面的連結確認您的電子郵件地址。",
+		"confirmEmail": "確認電子郵件",
+		"subject": "確認您的電子郵件"
+	},
+	"organizationInvitation": {
+		"body": "您已被邀請加入組織 {organizationName}。點擊下面的按鈕或將連結複製並貼上到您選擇的瀏覽器中以接受邀請並加入組織。",
+		"headline": "加入組織 {organizationName}",
+		"join": "加入組織",
+		"subject": "您已被邀請加入某個組織"
+	},
+	"notification": {
+		"openInApp": "在應用程式中開啟此通知：",
+		"subject": "新通知",
+		"view": "看法"
+	}
+}

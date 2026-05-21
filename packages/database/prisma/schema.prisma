@@ -1,0 +1,442 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider   = "prisma-client"
+  output     = "./generated"
+  engineType = "client"
+}
+
+generator zod {
+  provider = "prisma-zod-generator"
+  output   = "./zod"
+  config   = "./zod-generator.config.json"
+}
+
+model User {
+  id                       String                       @id @default(cuid())
+  name                     String
+  email                    String
+  emailVerified            Boolean
+  image                    String?
+  createdAt                DateTime
+  updatedAt                DateTime
+  username                 String?
+  role                     String?
+  banned                   Boolean?
+  banReason                String?
+  banExpires               DateTime?
+  onboardingComplete       Boolean                      @default(false)
+  paymentsCustomerId       String?
+  locale                   String?
+  displayUsername          String?
+  twoFactorEnabled         Boolean?
+  lastActiveOrganizationId String?
+  anismileTier             String?                      @default("NORMAL") @map("anismile_tier")
+  anismileTierUpdatedAt    DateTime?                    @map("anismile_tier_updated_at")
+  sessions                 Session[]
+  accounts                 Account[]
+  passkeys                 Passkey[]
+  invitations              Invitation[]
+  purchases                Purchase[]
+  members                  Member[]
+  twofactors               TwoFactor[]
+  notifications            Notification[]
+  notificationPreferences  UserNotificationPreference[]
+  anismileCartItems        AnismileCartItem[]
+  anismileWishlistItems    AnismileWishlistItem[]
+  anismileOrders           AnismileOrder[]
+  anismileAddresses        AnismileAddress[]
+
+  @@unique([email])
+  @@unique([username])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  impersonatedBy String?
+
+  activeOrganizationId String?
+
+  token     String
+  createdAt DateTime
+  updatedAt DateTime
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id           String    @id @default(cuid())
+  accountId    String
+  providerId   String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken  String?   @db.Text
+  refreshToken String?   @db.Text
+  idToken      String?   @db.Text
+  expiresAt    DateTime?
+  password     String?
+
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  createdAt             DateTime
+  updatedAt             DateTime
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String   @db.Text
+  expiresAt  DateTime
+
+  createdAt DateTime?
+  updatedAt DateTime?
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+model Passkey {
+  id           String    @id @default(cuid())
+  name         String?
+  publicKey    String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialID String
+  counter      Int
+  deviceType   String
+  backedUp     Boolean
+  transports   String?
+  aaguid       String?
+  createdAt    DateTime?
+
+  @@index([userId])
+  @@index([credentialID])
+  @@map("passkey")
+}
+
+model TwoFactor {
+  id          String  @id @default(cuid())
+  secret      String
+  backupCodes String
+  verified    Boolean @default(false)
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([secret])
+  @@index([userId])
+  @@map("twoFactor")
+}
+
+model Organization {
+  id                 String       @id @default(cuid())
+  name               String
+  slug               String?
+  logo               String?
+  createdAt          DateTime
+  metadata           String?
+  paymentsCustomerId String?
+  members            Member[]
+  invitations        Invitation[]
+  purchases          Purchase[]
+  licenses           License[]
+
+  @@unique([slug])
+  @@map("organization")
+}
+
+enum LicenseStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+model License {
+  id             String             @id @default(cuid())
+  key            String             @unique
+  productId      String             @default("aire")
+  planId         String             @default("vip")
+  organizationId String
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  status         LicenseStatus      @default(ACTIVE)
+  maxDevices     Int                @default(1)
+  activations    DeviceActivation[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([organizationId])
+  @@map("license")
+}
+
+model DeviceActivation {
+  id                String    @id @default(cuid())
+  licenseId         String
+  license           License   @relation(fields: [licenseId], references: [id], onDelete: Cascade)
+  deviceFingerprint String
+  deviceName        String
+  allowedIp         String
+  activatedAt       DateTime  @default(now())
+  deactivatedAt     DateTime?
+  lastVerifiedAt    DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([licenseId])
+  @@index([licenseId, deviceFingerprint])
+  @@index([licenseId, deactivatedAt])
+  @@map("device_activation")
+}
+
+model Member {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String
+  createdAt      DateTime
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("member")
+}
+
+model Invitation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           String?
+  status         String
+  expiresAt      DateTime
+  inviterId      String
+  user           User         @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([email])
+  @@map("invitation")
+}
+
+enum PurchaseType {
+  SUBSCRIPTION
+  ONE_TIME
+}
+
+model Purchase {
+  id             String        @id @default(cuid())
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String?
+  type           PurchaseType
+  customerId     String
+  subscriptionId String?       @unique
+  priceId        String
+  status         String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([subscriptionId])
+  @@map("purchase")
+}
+
+enum NotificationTarget {
+  IN_APP
+  EMAIL
+}
+
+enum NotificationType {
+  WELCOME
+  APP_UPDATE
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  data      Json             @default("{}")
+  link      String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([userId])
+  @@map("notification")
+}
+
+model UserNotificationPreference {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  target    NotificationTarget
+  createdAt DateTime           @default(now())
+
+  @@unique([userId, type, target])
+  @@map("user_notification_preference")
+}
+
+model AnismileProduct {
+  id                    String                 @id @default(cuid())
+  supplierId            String                 @unique @map("supplier_id")
+  titleOriginal         String                 @map("title_original")
+  titleTranslated       String                 @map("title_translated")
+  descriptionOriginal   String?                @map("description_original")
+  descriptionTranslated String?                @map("description_translated")
+  imageUrls             Json                   @default("[]") @map("image_urls")
+  category              String?
+  series                String?
+  janCode               String?                @map("jan_code") @db.VarChar(20)
+  brand                 String?
+  franchise             String?
+  discountRate          Decimal?               @map("discount_rate") @db.Decimal(5, 4)
+  saleStatus            String?                @map("sale_status") @db.VarChar(30)
+  boxSpec               String?                @map("box_spec")
+  releaseDate           DateTime?              @map("release_date") @db.Date
+  originalPrice         Decimal?               @map("original_price") @db.Decimal(10, 2)
+  costPrice             Decimal                @map("cost_price") @db.Decimal(10, 2)
+  markupOverride        Decimal?               @map("markup_override") @db.Decimal(5, 4)
+  sellingPrice          Decimal                @map("selling_price") @db.Decimal(10, 2)
+  priceManualOverride   Boolean                @default(false) @map("price_manual_override")
+  listingDate           DateTime?              @map("listing_date") @db.Date
+  orderDeadline         DateTime?              @map("order_deadline") @db.Date
+  inStock               Boolean                @default(true) @map("in_stock")
+  stockQuantity         Int?                   @map("stock_quantity")
+  lastSyncedAt          DateTime               @map("last_synced_at")
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  cartItems             AnismileCartItem[]
+  wishlistItems         AnismileWishlistItem[]
+  orderItems            AnismileOrderItem[]
+
+  @@index([supplierId])
+  @@index([category])
+  @@index([series])
+  @@index([janCode])
+  @@index([brand])
+  @@index([franchise])
+  @@index([listingDate(sort: Desc)])
+  @@index([orderDeadline])
+  @@index([inStock, stockQuantity])
+  @@map("anismile_products")
+}
+
+model AnismileCartItem {
+  id        String          @id @default(cuid())
+  userId    String          @map("user_id")
+  productId String          @map("product_id")
+  quantity  Int             @default(1)
+  createdAt DateTime        @default(now()) @map("created_at")
+  user      User            @relation(fields: [userId], references: [id])
+  product   AnismileProduct @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+  @@map("anismile_cart_items")
+}
+
+model AnismileWishlistItem {
+  id        String          @id @default(cuid())
+  userId    String          @map("user_id")
+  productId String          @map("product_id")
+  quantity  Int             @default(0)
+  createdAt DateTime        @default(now()) @map("created_at")
+  user      User            @relation(fields: [userId], references: [id])
+  product   AnismileProduct @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@map("anismile_wishlist_items")
+}
+
+model AnismileOrder {
+  id              String              @id @default(cuid())
+  userId          String              @map("user_id")
+  status          String              @default("pending")
+  totalAmount     Decimal             @map("total_amount") @db.Decimal(12, 2)
+  shippingName    String              @default("") @map("shipping_name") @db.VarChar(100)
+  shippingPhone   String              @default("") @map("shipping_phone") @db.VarChar(30)
+  shippingAddress String              @default("") @map("shipping_address")
+  notes           String?
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  user            User                @relation(fields: [userId], references: [id])
+  items           AnismileOrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("anismile_orders")
+}
+
+model AnismileOrderItem {
+  id         String          @id @default(cuid())
+  orderId    String          @map("order_id")
+  productId  String          @map("product_id")
+  quantity   Int
+  unitPrice  Decimal         @map("unit_price") @db.Decimal(10, 2)
+  costPrice  Decimal         @map("cost_price") @db.Decimal(10, 2)
+  itemStatus       String          @default("pending") @map("item_status")
+  tierDiscountRate Decimal?        @map("tier_discount_rate") @db.Decimal(4, 3)
+  createdAt        DateTime        @default(now()) @map("created_at")
+  order            AnismileOrder   @relation(fields: [orderId], references: [id])
+  product          AnismileProduct @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@map("anismile_order_items")
+}
+
+model AnismileSyncLog {
+  id              String    @id @default(cuid())
+  startedAt       DateTime  @map("started_at")
+  finishedAt      DateTime? @map("finished_at")
+  status          String    @default("running")
+  productsSynced  Int       @default(0) @map("products_synced")
+  productsAdded   Int       @default(0) @map("products_added")
+  productsUpdated Int       @default(0) @map("products_updated")
+  errorMessage    String?   @map("error_message")
+
+  @@map("anismile_sync_logs")
+}
+
+model AnismileSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("anismile_settings")
+}
+
+model AnismileAddress {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  label     String?  @db.VarChar(50)
+  name      String   @db.VarChar(100)
+  phone     String   @db.VarChar(30)
+  address   String
+  idNumber  String?  @map("id_number") @db.VarChar(20)
+  lineId    String?  @map("line_id") @db.VarChar(50)
+  isDefault Boolean  @default(false) @map("is_default")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("anismile_addresses")
+}

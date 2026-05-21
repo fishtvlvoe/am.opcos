@@ -1,0 +1,19 @@
+{
+	"name": "@repo/sync",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@repo/api": "workspace:*",
+		"@repo/database": "workspace:*",
+		"@repo/logs": "workspace:*",
+		"opencc-js": "^1.0.5"
+	},
+	"devDependencies": {
+		"@repo/tsconfig": "workspace:*",
+		"@types/node": "catalog:"
+	}
+}

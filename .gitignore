@@ -1,0 +1,60 @@
+# 購買的參考碼（只讀，不 commit）
+supastarter-nextjs/
+
+# Spectra
+.spectra/
+openspec/.vector-search.db*
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Environment
+.env
+.env.local
+.env.production
+
+# Build
+.next/
+out/
+build
+.swc/
+dist/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Codex / Agent 工作目錄
+.agent/
+.agents/
+.codex/
+
+# 搬入 apps 時帶來的 AI/IDE/CI 工具目錄（各 app 獨立管理）
+apps/*/.cursor/
+apps/*/.opencode/
+apps/*/.gemini/
+apps/*/.claude/
+apps/*/.planning/
+apps/*/.github/
+apps/*/openspec/
+apps/*/.openspec.yaml
+apps/*/.spectra/
+apps/*/docs/
+graphify-out/
+.react-email/
+.content-collections/
+.prisma-zod-generator-manifest.json
+.vercel
