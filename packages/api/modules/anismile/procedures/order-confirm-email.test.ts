@@ -2,8 +2,11 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+const workspaceRoot = resolve(__dirname, "../../../../..");
+const rootFile = (path: string) => resolve(workspaceRoot, path);
+
 const templateSource = readFileSync(
-	resolve(process.cwd(), "packages/mail/emails/OrderConfirmation.tsx"),
+	rootFile("packages/mail/emails/OrderConfirmation.tsx"),
 	"utf8",
 );
 
@@ -13,7 +16,7 @@ const ordersSource = readFileSync(
 );
 
 const mailIndexSource = readFileSync(
-	resolve(process.cwd(), "packages/mail/emails/index.ts"),
+	rootFile("packages/mail/emails/index.ts"),
 	"utf8",
 );
 

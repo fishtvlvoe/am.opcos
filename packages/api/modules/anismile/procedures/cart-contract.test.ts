@@ -2,16 +2,19 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+const workspaceRoot = resolve(__dirname, "../../../../..");
+const rootFile = (path: string) => resolve(workspaceRoot, path);
+
 const procedureSource = readFileSync(
-	resolve(process.cwd(), "packages/api/modules/anismile/procedures/cart.ts"),
+	rootFile("packages/api/modules/anismile/procedures/cart.ts"),
 	"utf8",
 );
 const routerSource = readFileSync(
-	resolve(process.cwd(), "packages/api/modules/anismile/router.ts"),
+	rootFile("packages/api/modules/anismile/router.ts"),
 	"utf8",
 );
 const querySource = readFileSync(
-	resolve(process.cwd(), "packages/database/prisma/queries/anismile.ts"),
+	rootFile("packages/database/prisma/queries/anismile.ts"),
 	"utf8",
 );
 

@@ -2,20 +2,23 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
+const workspaceRoot = resolve(__dirname, "../../../../..");
+const rootFile = (path: string) => resolve(workspaceRoot, path);
+
 const cartSource = readFileSync(
-	resolve(process.cwd(), "packages/api/modules/anismile/procedures/cart.ts"),
+	rootFile("packages/api/modules/anismile/procedures/cart.ts"),
 	"utf8",
 );
 const importOrderSource = readFileSync(
-	resolve(process.cwd(), "packages/api/modules/anismile/procedures/import-order.ts"),
+	rootFile("packages/api/modules/anismile/procedures/import-order.ts"),
 	"utf8",
 );
 const databaseSource = readFileSync(
-	resolve(process.cwd(), "packages/database/prisma/queries/anismile.ts"),
+	rootFile("packages/database/prisma/queries/anismile.ts"),
 	"utf8",
 );
 const tierAdjusterSource = readFileSync(
-	resolve(process.cwd(), "packages/sync/src/tier-adjuster.ts"),
+	rootFile("packages/sync/src/tier-adjuster.ts"),
 	"utf8",
 );
 
