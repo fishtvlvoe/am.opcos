@@ -9,6 +9,7 @@ import type { BaseMailProps } from "../types";
 
 export function EmailVerification({
 	url,
+	name,
 	locale,
 	translations,
 }: {
@@ -22,10 +23,11 @@ export function EmailVerification({
 			common: translations.common,
 		},
 	});
+	const displayName = name.trim() || "您好";
 
 	return (
 		<Wrapper>
-			<Text>{t("body")}</Text>
+			<Text>{t("body", { name: displayName })}</Text>
 
 			<PrimaryButton href={url}>{t("confirmEmail")} &rarr;</PrimaryButton>
 

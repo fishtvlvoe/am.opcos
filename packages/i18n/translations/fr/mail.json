@@ -5,9 +5,9 @@
 		"useLink": "ou utilisez le lien suivant :"
 	},
 	"emailVerification": {
-		"body": "Bonjour,\nveuillez cliquer sur le lien ci-dessous pour vérifier cette nouvelle adresse e-mail.",
-		"confirmEmail": "Vérifier l'e-mail",
-		"subject": "Vérifiez votre e-mail"
+		"body": "Bonjour {name},\n\nCliquez sur le bouton ci-dessous pour vérifier votre compte AM d'achat par procuration. Après la vérification, vous pourrez utiliser votre compte OO pour accéder à AM, voir les prix des produits, ajouter des articles au panier et envoyer des commandes.\n\nSi vous n'avez pas demandé de compte AM, vous pouvez ignorer cet e-mail.",
+		"confirmEmail": "Vérifier le compte",
+		"subject": "Vérifiez votre compte AM"
 	},
 	"forgotPassword": {
 		"body": "Bonjour,\nvous avez demandé une réinitialisation de mot de passe.\n\nCliquez sur le bouton ci-dessous pour réinitialiser votre mot de passe.",

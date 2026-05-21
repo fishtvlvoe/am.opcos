@@ -5,9 +5,9 @@
 		"useLink": "or use the following link:"
 	},
 	"emailVerification": {
-		"body": "Hey,\nplease click the link below to verify this new email address.",
-		"confirmEmail": "Verify email",
-		"subject": "Verify your email"
+		"body": "Hi {name},\n\nPlease click the button below to verify your AM proxy-purchase account. After verification, you can use your OO account to enter AM, view product prices, add items to cart, and submit orders.\n\nIf you did not request an AM account, you can ignore this email.",
+		"confirmEmail": "Verify account",
+		"subject": "Verify your AM account"
 	},
 	"forgotPassword": {
 		"body": "Hey,\nyou requested a password reset.\n\nClick the button below to reset your password.",

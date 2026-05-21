@@ -5,9 +5,9 @@
 		"useLink": "o usa el siguiente enlace:"
 	},
 	"emailVerification": {
-		"body": "Hola,\npor favor haz clic en el enlace de abajo para verificar esta nueva dirección de correo electrónico.",
-		"confirmEmail": "Verificar correo",
-		"subject": "Verifica tu correo electrónico"
+		"body": "Hola {name},\n\nHaz clic en el botón de abajo para verificar tu cuenta AM de compras por encargo. Después de la verificación, podrás usar tu cuenta OO para entrar a AM, ver precios de productos, agregar artículos al carrito y enviar pedidos.\n\nSi no solicitaste una cuenta AM, puedes ignorar este correo.",
+		"confirmEmail": "Verificar cuenta",
+		"subject": "Verifica tu cuenta AM"
 	},
 	"forgotPassword": {
 		"body": "Hola,\nsolicitaste un restablecimiento de contraseña.\n\nHaz clic en el botón de abajo para restablecer tu contraseña.",

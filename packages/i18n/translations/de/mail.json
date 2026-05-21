@@ -5,9 +5,9 @@
 		"useLink": "oder nutze den folgenden Link:"
 	},
 	"emailVerification": {
-		"body": "Hallo!\nbitte klicke auf den unten stehenden Link, um diese neue E-Mail-Adresse zu bestätigen.",
-		"confirmEmail": "E-Mail verifizieren",
-		"subject": "E-Mail bestätigen"
+		"body": "Hallo {name},\n\nBitte klicke auf die Schaltfläche unten, um dein AM Proxy-Purchase-Konto zu bestätigen. Nach der Bestätigung kannst du mit deinem OO-Konto AM öffnen, Produktpreise ansehen, Artikel in den Warenkorb legen und Bestellungen senden.\n\nFalls du kein AM-Konto angefordert hast, kannst du diese E-Mail ignorieren.",
+		"confirmEmail": "Konto bestätigen",
+		"subject": "Bestätige dein AM-Konto"
 	},
 	"forgotPassword": {
 		"body": "Hallo,\n\ndu hast eine Passwortzurücksetzung beantragt.\n\n\nKlicke auf den unten stehenden Link, um dein Passwort zurückzusetzen.",

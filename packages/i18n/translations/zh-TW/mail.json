@@ -5,9 +5,9 @@
 		"useLink": "或使用以下連結："
 	},
 	"emailVerification": {
-		"body": "嘿，\n請點擊下面的連結來驗證這個新的電子郵件地址。",
-		"confirmEmail": "驗證電子郵件",
-		"subject": "驗證您的電子郵件"
+		"body": "{name} 您好，\n\n請點擊下方按鈕完成 AM 日貨下單代理帳號驗證。驗證完成後，您就可以使用 OO 帳號進入 AM，查看商品價格、加入購物車並送出訂單。\n\n如果您沒有申請 AM 帳號，請忽略此封信。",
+		"confirmEmail": "完成帳號驗證",
+		"subject": "驗證您的 AM 帳號"
 	},
 	"forgotPassword": {
 		"body": "嘿，\n您請求重置密碼。\n\n點擊下面的按鈕重設您的密碼。",
