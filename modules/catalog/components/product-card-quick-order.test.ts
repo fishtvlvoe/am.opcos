@@ -10,7 +10,7 @@ function read(relativePath: string) {
 describe("ProductCard 快速下單結構契約", () => {
 	it("包含愛心收藏圖示引用", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/ProductCard.tsx",
+			"modules/catalog/components/ProductCard.tsx",
 		);
 		const hasHeart =
 			source.includes("Heart") || source.includes("HeartIcon");
@@ -19,7 +19,7 @@ describe("ProductCard 快速下單結構契約", () => {
 
 	it("包含購物車圖示引用", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/ProductCard.tsx",
+			"modules/catalog/components/ProductCard.tsx",
 		);
 		const hasCart =
 			source.includes("ShoppingCart") ||
@@ -29,7 +29,7 @@ describe("ProductCard 快速下單結構契約", () => {
 
 	it("Heart 按鈕為 32x32（w-8 h-8）", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/ProductCard.tsx",
+			"modules/catalog/components/ProductCard.tsx",
 		);
 		expect(source).toContain("w-8");
 		expect(source).toContain("h-8");
@@ -37,7 +37,7 @@ describe("ProductCard 快速下單結構契約", () => {
 
 	it("Cart 按鈕為 32x32（w-8 h-8）", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/ProductCard.tsx",
+			"modules/catalog/components/ProductCard.tsx",
 		);
 		// w-8 h-8 已由上面斷言覆蓋，此處確認 ShoppingCart 與尺寸共存
 		const hasCart =
@@ -50,14 +50,14 @@ describe("ProductCard 快速下單結構契約", () => {
 
 	it("不包含文字「加入購物車」（純圖示操作）", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/ProductCard.tsx",
+			"modules/catalog/components/ProductCard.tsx",
 		);
 		expect(source).not.toContain("加入購物車");
 	});
 
 	it("包含 fill-current（Heart toggle 填色）", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/ProductCard.tsx",
+			"modules/catalog/components/ProductCard.tsx",
 		);
 		expect(source).toContain("fill-current");
 	});

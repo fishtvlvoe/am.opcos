@@ -6,7 +6,7 @@ function read(relativePath: string) {
 	return readFileSync(resolve(process.cwd(), relativePath), "utf8");
 }
 
-const componentPath = "apps/anismile/modules/admin/components/EditProductModal.tsx";
+const componentPath = "modules/admin/components/EditProductModal.tsx";
 
 describe("EditProductModal UI contract", () => {
 	it("edit product modal — component accepts 5 field props plus open/onOpenChange/onSuccess", () => {

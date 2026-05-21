@@ -37,7 +37,7 @@ describe("getDeadlineBadgeState", () => {
 describe("DeadlineBadge source contract", () => {
 	it("uses deadline pulse class hook and red style tokens", () => {
 		const source = readFileSync(
-			resolve(process.cwd(), "apps/anismile/modules/catalog/components/DeadlineBadge.tsx"),
+			resolve(process.cwd(), "modules/catalog/components/DeadlineBadge.tsx"),
 			"utf8",
 		);
 

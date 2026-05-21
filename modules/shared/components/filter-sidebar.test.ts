@@ -7,7 +7,7 @@ function read(relativePath: string) {
 }
 
 describe("FilterSidebar quickFilters 契約", () => {
-	const filePath = "apps/anismile/modules/shared/components/FilterSidebar.tsx";
+	const filePath = "modules/shared/components/FilterSidebar.tsx";
 
 	it("檔案存在且可讀", () => {
 		expect(() => read(filePath)).not.toThrow();

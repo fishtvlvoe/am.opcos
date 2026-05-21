@@ -10,14 +10,14 @@ function read(relativePath: string) {
 describe("TableView 表格模式結構契約", () => {
 	it("檔案存在且可讀", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/TableView.tsx",
+			"modules/catalog/components/TableView.tsx",
 		);
 		expect(source.length).toBeGreaterThan(0);
 	});
 
 	it("包含 HTML table 或 Table 元件標籤", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/TableView.tsx",
+			"modules/catalog/components/TableView.tsx",
 		);
 		const hasTable =
 			source.includes("<table") ||
@@ -28,35 +28,35 @@ describe("TableView 表格模式結構契約", () => {
 
 	it("包含商品名稱欄位標頭", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/TableView.tsx",
+			"modules/catalog/components/TableView.tsx",
 		);
 		expect(source).toContain("商品名稱");
 	});
 
 	it("包含價格欄位標頭", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/TableView.tsx",
+			"modules/catalog/components/TableView.tsx",
 		);
 		expect(source).toContain("價格");
 	});
 
 	it("包含折扣率欄位標頭", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/TableView.tsx",
+			"modules/catalog/components/TableView.tsx",
 		);
 		expect(source).toContain("折扣率");
 	});
 
 	it("包含 JAN 條碼欄位標頭", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/TableView.tsx",
+			"modules/catalog/components/TableView.tsx",
 		);
 		expect(source).toContain("JAN");
 	});
 
 	it("包含快速下單操作圖示（Heart 或 ShoppingCart）", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/TableView.tsx",
+			"modules/catalog/components/TableView.tsx",
 		);
 		const hasOrderAction =
 			source.includes("Heart") || source.includes("ShoppingCart");
@@ -65,7 +65,7 @@ describe("TableView 表格模式結構契約", () => {
 
 	it("包含下單單位或規格欄位", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/TableView.tsx",
+			"modules/catalog/components/TableView.tsx",
 		);
 		const hasUnit =
 			source.includes("下單單位") ||

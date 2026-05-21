@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 describe("MobileMenu", () => {
 	it("contains overlay panel structure and responsive card width hooks", () => {
 		const source = readFileSync(
-			resolve(process.cwd(), "apps/anismile/modules/shared/components/MobileMenu.tsx"),
+			resolve(process.cwd(), "modules/shared/components/MobileMenu.tsx"),
 			"utf8",
 		);
 

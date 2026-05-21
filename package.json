@@ -9,6 +9,7 @@
 		"e2e:visual": "playwright test e2e/visual-diff.spec.ts",
 		"prebuild": "pnpm --filter @repo/database generate",
 		"start": "next start",
+		"test": "vitest run modules packages",
 		"type-check": "next typegen && tsc --noEmit"
 	},
 	"dependencies": {
@@ -54,6 +55,7 @@
 		"pixelmatch": "^7.1.0",
 		"pngjs": "^7.0.0",
 		"tailwindcss": "catalog:",
-		"typescript": "catalog:"
+		"typescript": "catalog:",
+		"vitest": "catalog:"
 	}
 }

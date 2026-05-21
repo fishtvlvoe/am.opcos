@@ -7,7 +7,7 @@ function read(relativePath: string) {
 }
 
 describe("ProductDetailPage 操作區契約", () => {
-	const filePath = "apps/anismile/modules/detail/ProductDetailPage.tsx";
+	const filePath = "modules/detail/ProductDetailPage.tsx";
 
 	it("引用 Heart icon", () => {
 		const source = read(filePath);

@@ -8,14 +8,14 @@ function read(relativePath: string) {
 
 describe("Order history UI contract", () => {
 	it("uses OrderCard and empty state guidance", () => {
-		const source = read("apps/anismile/modules/orders/OrdersPage.tsx");
+		const source = read("modules/orders/OrdersPage.tsx");
 		expect(source).toContain("OrderCard");
 		expect(source).toContain("目前還沒有訂單");
 		expect(source).toContain("前往商品目錄");
 	});
 
 	it("maps status badge colors and texts", () => {
-		const source = read("apps/anismile/modules/orders/components/OrderCard.tsx");
+		const source = read("modules/orders/components/OrderCard.tsx");
 		expect(source).toContain("pending");
 		expect(source).toContain("amber");
 		expect(source).toContain("shipped");

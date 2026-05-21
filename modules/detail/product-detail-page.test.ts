@@ -8,8 +8,8 @@ function read(relativePath: string) {
 
 describe("Product detail public flow", () => {
 	it("provides public route and login redirect contract", () => {
-		const routeSource = read("apps/anismile/app/(authenticated)/products/[id]/page.tsx");
-		const pageSource = read("apps/anismile/modules/detail/ProductDetailPage.tsx");
+		const routeSource = read("app/(public)/products/[id]/page.tsx");
+		const pageSource = read("modules/detail/ProductDetailPage.tsx");
 
 		expect(routeSource).toContain("ProductDetailPage");
 		expect(pageSource).toContain("NEXT_PUBLIC_OPCOS_URL");
@@ -18,8 +18,8 @@ describe("Product detail public flow", () => {
 	});
 
 	it("includes image gallery and quantity selector boundaries", () => {
-		const pageSource = read("apps/anismile/modules/detail/ProductDetailPage.tsx");
-		const quantitySource = read("apps/anismile/modules/detail/components/QuantitySelector.tsx");
+		const pageSource = read("modules/detail/ProductDetailPage.tsx");
+		const quantitySource = read("modules/detail/components/QuantitySelector.tsx");
 
 		expect(pageSource).toContain("ImageGallery");
 		expect(pageSource).toContain("QuantitySelector");

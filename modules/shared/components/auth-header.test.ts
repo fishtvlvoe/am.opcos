@@ -8,7 +8,7 @@ function read(relativePath: string) {
 
 describe("AuthHeader contract", () => {
 	it("contains avatar dropdown and cart badge", () => {
-		const source = read("apps/anismile/modules/shared/components/AuthHeader.tsx");
+		const source = read("modules/shared/components/AuthHeader.tsx");
 		expect(source).toContain("DropdownMenu");
 		expect(source).toContain("帳號設定");
 		expect(source).toContain("登出");
@@ -17,7 +17,7 @@ describe("AuthHeader contract", () => {
 
 	it("authenticated layout mounts AppNav (includes cart badge + user menu)", () => {
 		// layout 使用 AppNav 整合導航，AuthHeader 功能已整合於 AppNav
-		const source = read("apps/anismile/app/(authenticated)/layout.tsx");
+		const source = read("app/(authenticated)/layout.tsx");
 		expect(source).toContain("AppNav");
 	});
 });

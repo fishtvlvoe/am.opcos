@@ -8,7 +8,7 @@ function read(relativePath: string) {
 }
 
 describe("DeadlineSection 元件", () => {
-	const filePath = "apps/anismile/modules/home/components/DeadlineSection.tsx";
+	const filePath = "modules/home/components/DeadlineSection.tsx";
 
 	it("檔案存在且可讀", () => {
 		expect(() => read(filePath)).not.toThrow();

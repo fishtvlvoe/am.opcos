@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const appLayout = readFileSync(resolve(process.cwd(), "apps/anismile/app/layout.tsx"), "utf8");
-const globalCss = readFileSync(resolve(process.cwd(), "apps/anismile/app/globals.css"), "utf8");
+const appLayout = readFileSync(resolve(process.cwd(), "app/layout.tsx"), "utf8");
+const globalCss = readFileSync(resolve(process.cwd(), "app/globals.css"), "utf8");
 
 describe("anismile visual system", () => {
 	it("uses Inter via next/font in app layout", () => {

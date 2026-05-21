@@ -10,14 +10,14 @@ function read(relativePath: string) {
 describe("ToolbarRow 工具列結構契約", () => {
 	it("檔案存在且可讀", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/ToolbarRow.tsx",
+			"modules/catalog/components/ToolbarRow.tsx",
 		);
 		expect(source.length).toBeGreaterThan(0);
 	});
 
 	it("包含排序 combobox 控制項", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/ToolbarRow.tsx",
+			"modules/catalog/components/ToolbarRow.tsx",
 		);
 		const hasSort =
 			source.includes("select") ||
@@ -29,7 +29,7 @@ describe("ToolbarRow 工具列結構契約", () => {
 
 	it("包含每頁件數選擇", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/ToolbarRow.tsx",
+			"modules/catalog/components/ToolbarRow.tsx",
 		);
 		const hasPerPage =
 			source.includes("perPage") ||
@@ -41,7 +41,7 @@ describe("ToolbarRow 工具列結構契約", () => {
 
 	it("包含卡片／表格模式切換圖示", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/ToolbarRow.tsx",
+			"modules/catalog/components/ToolbarRow.tsx",
 		);
 		const hasViewToggle =
 			source.includes("LayoutGrid") ||
@@ -54,7 +54,7 @@ describe("ToolbarRow 工具列結構契約", () => {
 
 	it("包含 CSV 下載功能", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/ToolbarRow.tsx",
+			"modules/catalog/components/ToolbarRow.tsx",
 		);
 		const hasCsv =
 			source.includes("CSV") ||
@@ -65,7 +65,7 @@ describe("ToolbarRow 工具列結構契約", () => {
 
 	it("包含篩選入口", () => {
 		const source = read(
-			"apps/anismile/modules/catalog/components/ToolbarRow.tsx",
+			"modules/catalog/components/ToolbarRow.tsx",
 		);
 		const hasFilter =
 			source.includes("篩選") ||

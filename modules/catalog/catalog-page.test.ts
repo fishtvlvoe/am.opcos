@@ -8,7 +8,7 @@ function read(relativePath: string) {
 
 describe("CatalogPage", () => {
 	it("implements URL state and pagination contract", () => {
-		const source = read("apps/anismile/modules/catalog/CatalogPage.tsx");
+		const source = read("modules/catalog/CatalogPage.tsx");
 
 		expect(source).toContain("parseAsString.withDefault(\"\")");
 		expect(source).toContain("useQueryState(\"q\"");
@@ -18,7 +18,7 @@ describe("CatalogPage", () => {
 	});
 
 	it("wires required catalog components", () => {
-		const source = read("apps/anismile/modules/catalog/CatalogPage.tsx");
+		const source = read("modules/catalog/CatalogPage.tsx");
 
 		expect(source).toContain("NewArrivalsScroll");
 		expect(source).toContain("CategorySidebar");

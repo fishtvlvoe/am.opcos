@@ -9,7 +9,7 @@ function read(relativePath: string) {
 
 describe("AnnouncementBanner 元件", () => {
 	const filePath =
-		"apps/anismile/modules/home/components/AnnouncementBanner.tsx";
+		"modules/home/components/AnnouncementBanner.tsx";
 
 	it("檔案存在且可讀", () => {
 		expect(() => read(filePath)).not.toThrow();

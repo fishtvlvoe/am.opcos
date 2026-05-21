@@ -8,7 +8,7 @@ function read(relativePath: string) {
 
 describe("Admin dashboard UI contract", () => {
 	it("renders KPI stat cards and sync failure indicator", () => {
-		const source = read("apps/anismile/modules/admin/DashboardPage.tsx");
+		const source = read("modules/admin/DashboardPage.tsx");
 		expect(source).toContain("StatsTile");
 		expect(source).toContain("待處理訂單");
 		expect(source).toContain("本月營收");
@@ -18,14 +18,14 @@ describe("Admin dashboard UI contract", () => {
 	});
 
 	it("renders order table with profit and status updates", () => {
-		const source = read("apps/anismile/modules/admin/components/OrderTable.tsx");
+		const source = read("modules/admin/components/OrderTable.tsx");
 		expect(source).toContain("利潤");
 		expect(source).toContain("rowProfit");
 		expect(source).toContain("onUpdateStatus");
 	});
 
 	it("supports csv export and manual sync trigger actions", () => {
-		const source = read("apps/anismile/modules/admin/DashboardPage.tsx");
+		const source = read("modules/admin/DashboardPage.tsx");
 		expect(source).toContain("downloadCsv");
 		expect(source).toContain("orpc.anismile.sync.mutationOptions");
 	});

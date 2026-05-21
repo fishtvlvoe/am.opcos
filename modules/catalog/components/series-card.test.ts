@@ -9,7 +9,7 @@ function read(relativePath: string) {
 
 describe("SeriesCard 元件", () => {
 	const filePath =
-		"apps/anismile/modules/catalog/components/SeriesCard.tsx";
+		"modules/catalog/components/SeriesCard.tsx";
 
 	it("檔案存在且可讀", () => {
 		expect(() => read(filePath)).not.toThrow();

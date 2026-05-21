@@ -8,13 +8,13 @@ function read(relativePath: string) {
 
 describe("Cart page UI contract", () => {
 	it("uses CartItem and OrderSummary components", () => {
-		const source = read("apps/anismile/modules/cart/CartPage.tsx");
+		const source = read("modules/cart/CartPage.tsx");
 		expect(source).toContain("CartItem");
 		expect(source).toContain("OrderSummary");
 	});
 
 	it("wires quantity update, remove and checkout flow", () => {
-		const source = read("apps/anismile/modules/cart/CartPage.tsx");
+		const source = read("modules/cart/CartPage.tsx");
 		expect(source).toContain("orpc.anismile.cart.updateQuantity");
 		expect(source).toContain("orpc.anismile.cart.removeItem");
 		// 結帳 API 在 CheckoutPage，CartPage 只跳轉到 /checkout
@@ -22,7 +22,7 @@ describe("Cart page UI contract", () => {
 	});
 
 	it("disables checkout on empty cart and includes shipping note", () => {
-		const summarySource = read("apps/anismile/modules/cart/components/OrderSummary.tsx");
+		const summarySource = read("modules/cart/components/OrderSummary.tsx");
 		expect(summarySource).toContain("運費另計");
 		expect(summarySource).toContain("disabled={disabled}");
 	});

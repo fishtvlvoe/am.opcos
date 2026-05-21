@@ -8,7 +8,7 @@ function read(relativePath: string) {
 }
 
 describe("HomePage 頁面結構", () => {
-	const filePath = "apps/anismile/modules/home/HomePage.tsx";
+	const filePath = "modules/home/HomePage.tsx";
 
 	it("包含 AnnouncementBanner 元件引用", () => {
 		const source = read(filePath);
