@@ -28,6 +28,7 @@ export function initAnismileCron() {
 					series: item.series,
 					originalPrice: item.originalPrice,
 					costPrice: item.costPrice,
+					listingDate: item.listingDate,
 					orderDeadline: item.orderDeadline,
 					lastSyncedAt: new Date(),
 				})),

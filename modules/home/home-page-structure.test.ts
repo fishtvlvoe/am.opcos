@@ -25,14 +25,16 @@ describe("HomePage 頁面結構", () => {
 		expect(source).toContain("DeadlineSection");
 	});
 
-	it("首頁最新區塊直接顯示商品卡，讓未登入客戶也能看到商品", () => {
+	it("首頁依照 anismile.jp 結構顯示 Series 分組卡", () => {
 		const source = read(filePath);
-		expect(source).toContain("ProductCard");
-		expect(source).toContain("最新商品");
+		expect(source).toContain("getSeriesList");
+		expect(source).toContain("SeriesCard");
+		expect(source).toContain("商品系列");
 	});
 
-	it("包含 3 圖 banner grid 佈局（grid-cols-3）", () => {
+	it("首頁 banner 使用原站 banner API，不依賴商品卡替代", () => {
 		const source = read(filePath);
-		expect(source).toContain("grid-cols-3");
+		expect(source).toContain("getBanners");
+		expect(source).toContain("BannerCarousel");
 	});
 });

@@ -10,12 +10,13 @@ interface SeriesCardProps {
 		maker: string;
 		count: number;
 		image?: string;
+		href?: string;
 	};
 }
 
 export function SeriesCard({ series }: SeriesCardProps) {
 	return (
-		<Link href={`/series/${series.id}`} className="block">
+		<Link href={series.href ?? `/series/${encodeURIComponent(series.id)}`} className="block">
 			<div className="card-hover overflow-hidden rounded-xl border border-stone-200 bg-white transition-shadow hover:shadow-md">
 				<div className="relative aspect-square bg-stone-100">
 					{series.image ? (

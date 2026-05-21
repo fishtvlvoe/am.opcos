@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseProductApiForTest } from "./crawler";
+import { parseProductApiForTest, parseProductEntriesFromSeriesPageForTest } from "./crawler";
 
 const BASE_ITEM = {
 	hash: "test001",
@@ -60,5 +60,21 @@ describe("parseProductApi — new field extraction", () => {
 		};
 		const result = parseProductApiForTest(res);
 		expect(result?.janCode).toBe("4573684703414");
+	});
+});
+
+describe("series page product discovery", () => {
+	it("extracts unique item ids with the source listing date", () => {
+		const listingDate = new Date("2026-05-20T00:00:00.000Z");
+		const html = `
+			<a href="/item/123/">A</a>
+			<a href="https://www.anismile.jp/item/456/">B</a>
+			<a href="/item/123/">A again</a>
+		`;
+
+		expect(parseProductEntriesFromSeriesPageForTest(html, listingDate)).toEqual([
+			{ id: "456", listingDate },
+			{ id: "123", listingDate },
+		]);
 	});
 });

@@ -14,6 +14,7 @@ export type CrawledAnismileProduct = {
 	series: string | null;
 	originalPrice: number | null;
 	costPrice: number;
+	listingDate?: Date | null;
 	orderDeadline: Date | null;
 	stockQuantity: number | null;
 	discountRate: number | null;
@@ -42,7 +43,9 @@ export type AnismileCrawlOptions = {
 const LOGIN_URL = "https://www.anismile.jp/login/index";
 const PRODUCT_API_URL = "https://www.anismile.jp/product/index";
 const SITEMAP_URL = "https://www.anismile.jp/sitemap.xml";
+const SERIES_LIST_URL = "https://www.anismile.jp/series_list/index";
 const PRODUCT_PAGE_BASE_URL = "https://www.anismile.jp/item";
+const SERIES_PAGE_BASE_URL = "https://www.anismile.jp/series";
 
 function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
@@ -82,6 +85,20 @@ function parseSitemap(xml: string): string[] {
 function normalizeProductIds(productIds: string[]): string[] {
 	return Array.from(new Set(productIds)).sort((a, b) => Number(b) - Number(a));
 }
+
+type ProductEntry = {
+	id: string;
+	listingDate: Date | null;
+};
+
+type SourceSeriesListResponse = {
+	code: number;
+	items?: Array<{
+		id: number | string;
+		name: string;
+		latest_add_time?: number;
+	}>;
+};
 
 async function fetchText(url: string, init?: RequestInit): Promise<string> {
 	const response = await fetch(url, init);
@@ -150,6 +167,39 @@ async function getProductIds(): Promise<string[]> {
 	}
 
 	return normalizeProductIds(itemUrls.map(parseProductId).filter(Boolean));
+}
+
+function parseSourceTimestamp(timestamp: number | null | undefined): Date | null {
+	if (!timestamp) return null;
+	return new Date(timestamp * 1000);
+}
+
+function parseProductEntriesFromSeriesPage(html: string, listingDate: Date | null): ProductEntry[] {
+	const ids = normalizeProductIds([...html.matchAll(/\/item\/(\d+)\//g)].map((match) => String(match[1])));
+	return ids.map((id) => ({ id, listingDate }));
+}
+
+async function getHomepageProductEntries(): Promise<ProductEntry[]> {
+	const payload = await fetchJson<SourceSeriesListResponse>(`${SERIES_LIST_URL}?lang=en`);
+	if (payload.code !== 1 || !payload.items?.length) return [];
+
+	const topSeries = payload.items.slice(0, 8);
+	const pages = await Promise.all(
+		topSeries.map(async (series) => {
+			const listingDate = parseSourceTimestamp(series.latest_add_time);
+			const url = `${SERIES_PAGE_BASE_URL}/${series.id}/${encodeURIComponent(series.name)}/`;
+			const html = await fetchText(url);
+			return parseProductEntriesFromSeriesPage(html, listingDate);
+		}),
+	);
+	const seen = new Set<string>();
+	return pages
+		.flat()
+		.filter((entry) => {
+			if (seen.has(entry.id)) return false;
+			seen.add(entry.id);
+			return true;
+		});
 }
 
 type AnismileProductResponse = {
@@ -222,6 +272,7 @@ function parseProductApi(res: AnismileProductResponse, productId?: string): Craw
 }
 
 export { parseProductApi as parseProductApiForTest };
+export { parseProductEntriesFromSeriesPage as parseProductEntriesFromSeriesPageForTest };
 
 export async function crawlAnismileProductsWithStats({
 	offset = 0,
@@ -229,20 +280,24 @@ export async function crawlAnismileProductsWithStats({
 	delayMs = 500,
 }: AnismileCrawlOptions = {}): Promise<AnismileCrawlResult> {
 	const cookie = await getAuthenticatedCookie();
-	const allProductIds = await getProductIds();
+	const homepageProductEntries = await getHomepageProductEntries();
+	const allProductEntries =
+		homepageProductEntries.length > 0
+			? homepageProductEntries
+			: (await getProductIds()).map((id) => ({ id, listingDate: null }));
 	const safeOffset = Math.max(0, offset);
-	const safeLimit = limit && limit > 0 ? limit : allProductIds.length;
-	const productIds = allProductIds.slice(safeOffset, safeOffset + safeLimit);
+	const safeLimit = limit && limit > 0 ? limit : allProductEntries.length;
+	const productEntries = allProductEntries.slice(safeOffset, safeOffset + safeLimit);
 	const products: CrawledAnismileProduct[] = [];
 	let productsSkipped = 0;
 	let productsFailed = 0;
 	const failureReasons: string[] = [];
 
 	logger.info(
-		`[anismile] starting crawl: ${productIds.length}/${allProductIds.length} products (offset=${safeOffset}, limit=${safeLimit})`,
+		`[anismile] starting crawl: ${productEntries.length}/${allProductEntries.length} products (offset=${safeOffset}, limit=${safeLimit})`,
 	);
 
-	for (const id of productIds) {
+	for (const { id, listingDate } of productEntries) {
 		try {
 			const res = await fetchJson<AnismileProductResponse>(PRODUCT_API_URL, {
 				method: "POST",
@@ -255,6 +310,7 @@ export async function crawlAnismileProductsWithStats({
 
 			const parsed = parseProductApi(res, id);
 			if (parsed) {
+				parsed.listingDate = listingDate;
 				products.push(parsed);
 			} else {
 				productsSkipped += 1;
@@ -273,10 +329,10 @@ export async function crawlAnismileProductsWithStats({
 		}
 	}
 
-	logger.info(`[anismile] crawl complete: ${products.length}/${productIds.length} products`);
+	logger.info(`[anismile] crawl complete: ${products.length}/${productEntries.length} products`);
 	return {
 		products,
-		totalDiscovered: allProductIds.length,
+		totalDiscovered: allProductEntries.length,
 		batchOffset: safeOffset,
 		batchLimit: safeLimit,
 		productsSkipped,

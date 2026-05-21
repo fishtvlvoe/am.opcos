@@ -24,6 +24,71 @@ function publicPrice<T extends number>(value: T, visible: boolean): T | null {
 	return visible ? value : null;
 }
 
+const ANISMILE_ORIGIN = "https://www.anismile.jp";
+const PLACEHOLDER_IMAGE_MARKER = "length_shadow_white";
+
+type SeriesImageResponse = {
+	code: number;
+	items?: Array<{
+		name?: string;
+		file?: { url?: string; thumb?: string };
+	}>;
+};
+
+function normalizeSourceImageUrl(url: string | undefined) {
+	if (!url) return "";
+	if (url.startsWith("/files/")) return `https://img.anismile.jp${url}`;
+	if (url.startsWith(`${ANISMILE_ORIGIN}/files/`)) {
+		return url.replace(`${ANISMILE_ORIGIN}/files/`, "https://img.anismile.jp/files/");
+	}
+	return url;
+}
+
+function toImageUrlArray(value: unknown): string[] {
+	return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : [];
+}
+
+function isPlaceholderImageUrl(url: string | null | undefined) {
+	return !url || url.includes(PLACEHOLDER_IMAGE_MARKER);
+}
+
+async function getSourceSeriesImageMap() {
+	const responses = await Promise.all(
+		Array.from({ length: 30 }, async (_, dateIndex) => {
+			const url = new URL(`${ANISMILE_ORIGIN}/series_list/index`);
+			url.searchParams.set("lang", "en");
+			url.searchParams.set("dateIndex", String(dateIndex));
+			const response = await fetch(url, { next: { revalidate: 300 } });
+			if (!response.ok) return [] as Array<[string, string]>;
+			const payload = (await response.json()) as SeriesImageResponse;
+			return (payload.items ?? [])
+				.map((item): [string, string] => [
+					item.name ?? "",
+					normalizeSourceImageUrl(item.file?.url || item.file?.thumb),
+				])
+				.filter(([name, imageUrl]) => Boolean(name && imageUrl));
+		}),
+	).catch(() => []);
+
+	return new Map(responses.flat());
+}
+
+function getSeriesFallbackImage(series: string | null, seriesImageMap: Map<string, string>) {
+	if (!series) return null;
+	return (
+		seriesImageMap.get(series) ??
+		[...seriesImageMap.entries()].find(([name]) => series.startsWith(name) || name.startsWith(series))?.[1] ??
+		null
+	);
+}
+
+function getDisplayImageUrls(product: { imageUrls: unknown; series: string | null }, seriesImageMap: Map<string, string>) {
+	const imageUrls = toImageUrlArray(product.imageUrls);
+	if (!isPlaceholderImageUrl(imageUrls[0])) return imageUrls;
+	const fallbackImage = getSeriesFallbackImage(product.series, seriesImageMap);
+	return fallbackImage ? [fallbackImage, ...imageUrls.filter((url) => !isPlaceholderImageUrl(url))] : imageUrls;
+}
+
 const listProductsInput = z.object({
 	category: z.string().min(1).optional(),
 	series: z.string().min(1).optional(),
@@ -58,6 +123,7 @@ export const listProducts = publicProcedure
 			urgentDeadline: input.urgentDeadline,
 			showUnavailable: input.showUnavailable,
 		});
+		const seriesImageMap = await getSourceSeriesImageMap();
 
 		return {
 			...result,
@@ -65,7 +131,7 @@ export const listProducts = publicProcedure
 				id: item.id,
 				titleTranslated: item.titleTranslated,
 				titleOriginal: item.titleOriginal,
-				imageUrls: item.imageUrls,
+				imageUrls: getDisplayImageUrls(item, seriesImageMap),
 				category: item.category,
 				series: item.series,
 				sellingPrice: publicPrice(toNumberRequired(item.sellingPrice), showPrices),
@@ -95,6 +161,7 @@ export const listProductsAdmin = anismileAdminProcedure
 			listingDate,
 			onlyInStock: false,
 		});
+		const seriesImageMap = await getSourceSeriesImageMap();
 
 		return {
 			...result,
@@ -102,7 +169,7 @@ export const listProductsAdmin = anismileAdminProcedure
 				id: item.id,
 				titleTranslated: item.titleTranslated,
 				titleOriginal: item.titleOriginal,
-				imageUrls: item.imageUrls,
+				imageUrls: getDisplayImageUrls(item, seriesImageMap),
 				category: item.category,
 				series: item.series,
 				originalPrice: toNumber(item.originalPrice),
@@ -130,11 +197,12 @@ export const listLatestProducts = publicProcedure
 	.handler(async ({ input, context }) => {
 		const showPrices = await canSeePricing(context.headers);
 		const items = await listLatestAnismileProducts(input.limit);
+		const seriesImageMap = await getSourceSeriesImageMap();
 		return items.map((item) => ({
 			id: item.id,
 			titleTranslated: item.titleTranslated,
 			titleOriginal: item.titleOriginal,
-			imageUrls: item.imageUrls,
+			imageUrls: getDisplayImageUrls(item, seriesImageMap),
 			sellingPrice: publicPrice(toNumberRequired(item.sellingPrice), showPrices),
 			listingDate: item.listingDate,
 			orderDeadline: item.orderDeadline,
@@ -155,6 +223,7 @@ export const getProductById = publicProcedure
 		if (!product) {
 			throw new ORPCError("NOT_FOUND", { message: "Product not found" });
 		}
+		const seriesImageMap = await getSourceSeriesImageMap();
 
 		return {
 			id: product.id,
@@ -163,7 +232,7 @@ export const getProductById = publicProcedure
 			titleOriginal: product.titleOriginal,
 			titleTranslated: product.titleTranslated,
 			descriptionTranslated: product.descriptionTranslated,
-			imageUrls: product.imageUrls,
+			imageUrls: getDisplayImageUrls(product, seriesImageMap),
 			category: product.category,
 			series: product.series,
 			janCode: product.janCode ?? null,
@@ -287,14 +356,14 @@ function serializeProduct(p: {
 	listingDate: Date | null;
 	orderDeadline: Date | null;
 	releaseDate: Date | null;
-}, showPrices: boolean) {
+}, showPrices: boolean, seriesImageMap: Map<string, string>) {
 	return {
 		id: p.id,
 		supplierId: p.supplierId,
 		sourceUrl: p.sourceUrl,
 		titleOriginal: p.titleOriginal,
 		titleTranslated: p.titleTranslated,
-		imageUrls: p.imageUrls as string[],
+		imageUrls: getDisplayImageUrls(p, seriesImageMap),
 		category: p.category,
 		series: p.series,
 		janCode: p.janCode,
@@ -331,8 +400,9 @@ export const searchProducts = publicProcedure
 	.handler(async ({ input, context }) => {
 		const showPrices = await canSeePricing(context.headers);
 		const result = await searchAnismileProducts(input);
+		const seriesImageMap = await getSourceSeriesImageMap();
 		return {
-			items: result.items.map((item) => serializeProduct(item, showPrices)),
+			items: result.items.map((item) => serializeProduct(item, showPrices, seriesImageMap)),
 			total: result.total,
 			facets: result.facets,
 		};
@@ -365,8 +435,9 @@ export const listByCategory = publicProcedure
 	.handler(async ({ input, context }) => {
 		const showPrices = await canSeePricing(context.headers);
 		const result = await listProductsByCategory(input);
+		const seriesImageMap = await getSourceSeriesImageMap();
 		return {
-			items: result.items.map((item) => serializeProduct(item, showPrices)),
+			items: result.items.map((item) => serializeProduct(item, showPrices, seriesImageMap)),
 			total: result.total,
 			facets: result.facets,
 		};

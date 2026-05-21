@@ -3,18 +3,16 @@
 import { Button } from "@repo/ui";
 import { orpc } from "@shared/lib/orpc-query-utils";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
 import { AnnouncementBanner } from "./components/AnnouncementBanner";
 import { CategoryNav } from "./components/CategoryNav";
 import { DeadlineSection } from "./components/DeadlineSection";
 import { HotSearchTags } from "./components/HotSearchTags";
-import { ProductCard } from "../catalog/components/ProductCard";
-import { FranchiseBanner } from "./components/FranchiseBanner";
+import { SeriesCard } from "../catalog/components/SeriesCard";
 
 // ─── Breadcrumb ──────────────────────────────────────────────────────────────
 
@@ -78,103 +76,52 @@ function BannerCarousel() {
 
 // ─── 日期 Tab + 系列卡片 Grid ─────────────────────────────────────────────────
 
-type ProductItem = {
-	id: string;
-	title: string | null;
-	janCode: string | null;
-	sellingPrice: number | null;
-	imageUrls: unknown;
-	listingDate: Date | string | null;
-	category: string | null;
-	franchise?: string | null;
-	brand?: string | null;
-	orderDeadline?: Date | string | null;
-};
-
-function groupProductsToSeries(products: ProductItem[]) {
-	const groups = new Map<string, { id: string; name: string; ip: string; maker: string; count: number; image?: string }>();
-	for (const p of products) {
-		const key = p.category ?? "其他";
-		const existing = groups.get(key);
-		if (existing) {
-			existing.count++;
-		} else {
-			const firstImage = Array.isArray(p.imageUrls) ? String(p.imageUrls[0] ?? "") : "";
-			groups.set(key, {
-				id: key,
-				name: key,
-				ip: p.franchise ?? "",
-				maker: p.brand ?? "",
-				count: 1,
-				image: firstImage || undefined,
-			});
-		}
-	}
-	return Array.from(groups.values());
-}
-
 function ListingSection() {
-	const datesQuery = useQuery(orpc.anismile.homepage.getListingDates.queryOptions({ input: {} }));
-	const dates = datesQuery.data?.dates ?? [];
-	const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
-	useEffect(() => {
-		if (dates.length > 0 && selectedDate === null) {
-			setSelectedDate(dates[0] ?? null);
-		}
-	}, [dates, selectedDate]);
-
-	const productsQuery = useQuery({
-		...orpc.anismile.homepage.getProductsByDate.queryOptions({
-			input: { date: selectedDate ?? "" },
-		}),
-		enabled: !!selectedDate,
-	});
-	const products: ProductItem[] = productsQuery.data?.products ?? [];
-	const seriesList = groupProductsToSeries(products);
-	const franchiseBannerItems = seriesList.slice(0, 6).map((s) => ({
-		franchise: s.name,
-		image: s.image ?? "",
-		category: s.id,
+	const [selectedDateIndex, setSelectedDateIndex] = useState(0);
+	const seriesQuery = useQuery(orpc.anismile.homepage.getSeriesList.queryOptions({
+		input: { dateIndex: selectedDateIndex, limit: 30 },
 	}));
+	const seriesList = seriesQuery.data?.items ?? [];
+	const dates = seriesQuery.data?.availableDates ?? [];
 
 	return (
 		<section className="mb-12">
-			<h2 className="mb-4 text-lg font-bold text-stone-900">最新商品</h2>
-			<FranchiseBanner items={franchiseBannerItems} />
+			<h2 className="mb-4 text-lg font-bold text-stone-900">商品系列</h2>
 			<div className="mb-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-				{dates.map((date) => (
+				{dates.slice(0, 7).map((date, index) => (
 					<button
-						key={date}
+						key={date.date}
 						type="button"
-						onClick={() => setSelectedDate(date)}
+						onClick={() => setSelectedDateIndex(index)}
 						className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-							selectedDate === date
+							selectedDateIndex === index
 								? "bg-primary text-primary-foreground"
 								: "bg-stone-200 text-stone-700 hover:bg-stone-300"
 						}`}
 					>
-						{format(new Date(date), "M月d日上架")}
+						{date.display}
 					</button>
 				))}
 			</div>
 
-			{productsQuery.isPending ? (
+			{seriesQuery.isPending ? (
 				<div className="py-12 text-center text-muted-foreground">載入中...</div>
-			) : products.length === 0 ? (
+			) : seriesList.length === 0 ? (
 				<p className="text-sm text-stone-500">暫無商品</p>
 			) : (
-				<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-					{products.map((product, index) => (
-						<ProductCard
-							key={product.id}
-							id={product.id}
-							title={product.title ?? "未命名商品"}
-							price={product.sellingPrice}
-							imageUrl={Array.isArray(product.imageUrls) ? String(product.imageUrls[0] ?? "") : ""}
-							orderDeadline={product.orderDeadline}
-							listingDate={product.listingDate}
-							priority={index < 4}
+				<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+					{seriesList.map((series) => (
+						<SeriesCard
+							key={series.id}
+							series={{
+								id: series.name,
+								name: series.name,
+								ip: series.workTitle,
+								maker: series.manufacturer,
+								count: series.productCount,
+								image: series.imageUrl,
+								href: `/series/${encodeURIComponent(series.name)}`,
+							}}
 						/>
 					))}
 				</div>
