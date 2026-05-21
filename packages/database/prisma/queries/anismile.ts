@@ -1170,14 +1170,21 @@ export async function listProductsByCategory({
 
 	// 預設隱藏已過截止日的商品（showUnavailable=false/undefined 時排除）
 	const showUnavailable = filters?.showUnavailable ?? false;
+	const categoryWhere: Prisma.AnismileProductWhereInput =
+		slug === "其他"
+			? { OR: [{ category: null }, { category: { equals: slug, mode: "insensitive" } }] }
+			: { category: { equals: slug, mode: "insensitive" } };
+	const andConditions: Prisma.AnismileProductWhereInput[] = [categoryWhere];
+	if (!showUnavailable) {
+		andConditions.push({ OR: [{ orderDeadline: null }, { orderDeadline: { gte: today } }] });
+	}
 
 	const baseWhere: Prisma.AnismileProductWhereInput = {
-		category: { equals: slug, mode: "insensitive" },
+		AND: andConditions,
 		...(filters?.franchise ? { franchise: filters.franchise } : {}),
 		...(filters?.brand ? { brand: filters.brand } : {}),
 		...(filters?.inStock ? { inStock: true } : {}),
 		...(filters?.urgentDeadline ? { orderDeadline: { gte: today, lte: urgentEnd } } : {}),
-		...(!showUnavailable ? { OR: [{ orderDeadline: null }, { orderDeadline: { gte: today } }] } : {}),
 	};
 
 	const orderBy: Prisma.AnismileProductOrderByWithRelationInput[] =
