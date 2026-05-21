@@ -29,4 +29,12 @@ describe("Admin dashboard UI contract", () => {
 		expect(source).toContain("downloadCsv");
 		expect(source).toContain("orpc.anismile.sync.mutationOptions");
 	});
+
+	it("protects the admin dashboard route with an admin role guard", () => {
+		const source = read("app/(authenticated)/admin/page.tsx");
+		expect(source).toContain("getSession");
+		expect(source).toContain('session.user.role !== "admin"');
+		expect(source).toContain('session.user.role !== "super_admin"');
+		expect(source).toContain('redirect("/")');
+	});
 });
