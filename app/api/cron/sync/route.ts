@@ -7,6 +7,7 @@ import { runSync } from "@repo/sync";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 分鐘（Vercel Pro 最長）
+const STALE_RUNNING_SYNC_MS = 10 * 60 * 1000;
 
 export async function GET(request: Request) {
 	// 驗證 Cron Secret（防止外部觸發）
@@ -15,11 +16,25 @@ export async function GET(request: Request) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
-	// 防重複：如果 2 小時內有進行中的同步，跳過
+	const staleCutoff = new Date(Date.now() - STALE_RUNNING_SYNC_MS);
+	await db.anismileSyncLog.updateMany({
+		where: {
+			status: "running",
+			startedAt: { lt: staleCutoff },
+		},
+		data: {
+			status: "failed",
+			finishedAt: new Date(),
+			productsFailed: 1,
+			errorMessage: "Sync timed out or was interrupted before completion; stale running log cleared before retry.",
+		},
+	});
+
+	// 防重複：只阻擋仍在 Vercel 執行時間窗內的同步，避免 timeout 殘留卡住後續 cron
 	const running = await db.anismileSyncLog.findFirst({
 		where: {
 			status: "running",
-			startedAt: { gte: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+			startedAt: { gte: staleCutoff },
 		},
 	});
 
