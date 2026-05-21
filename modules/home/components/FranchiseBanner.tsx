@@ -29,7 +29,7 @@ export function FranchiseBanner({ items }: FranchiseBannerProps) {
 				{group.map((item) => (
 					<Link
 						key={item.category}
-						href={`/categories/${encodeURIComponent(item.category)}`}
+						href={`/categories/${encodeURIComponent(item.category)}?showAll=true`}
 						className="flex-1 overflow-hidden rounded-xl"
 					>
 						<img

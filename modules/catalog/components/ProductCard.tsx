@@ -71,7 +71,8 @@ export function ProductCard({
 	const daysLeft = orderDeadline ? differenceInCalendarDays(new Date(orderDeadline), new Date()) : null;
 	const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
 	const normalizedSaleStatus = isPastDeadline ? "已截止" : (saleStatus ?? null);
-	const addDisabled = normalizedSaleStatus === "已截止" || !canOrder;
+	const isOrderClosed = normalizedSaleStatus === "已截止";
+	const addDisabled = isOrderClosed || !canOrder;
 
 	return (
 		<div className={cn("card-hover overflow-hidden rounded-xl border border-stone-200 bg-white", className)}>
@@ -196,12 +197,18 @@ export function ProductCard({
 					</button>
 					</div>
 				) : (
-					<Link
-						href="/login"
-						className="block rounded-md border border-stone-200 px-3 py-2 text-center text-sm font-medium text-stone-700 hover:bg-stone-50"
-					>
-						登入後下單
-					</Link>
+					isOrderClosed ? (
+						<span className="block rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-center text-sm font-medium text-stone-500">
+							已截止
+						</span>
+					) : (
+						<Link
+							href="/login"
+							className="block rounded-md border border-stone-200 px-3 py-2 text-center text-sm font-medium text-stone-700 hover:bg-stone-50"
+						>
+							登入後下單
+						</Link>
+					)
 				)}
 			</div>
 		</div>
