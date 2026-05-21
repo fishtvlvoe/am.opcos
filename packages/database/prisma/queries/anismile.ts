@@ -3,6 +3,7 @@ import { Prisma } from "../generated/client";
 
 const DEFAULT_MARKUP_KEY = "default_markup";
 const DEFAULT_MARKUP_VALUE = "1.2";
+const SYNC_CURSOR_KEY = "sync.cursor";
 
 export const ORDER_STATUSES = ["pending", "confirmed", "shipped", "completed", "cancelled"] as const;
 export type AnismileOrderStatus = (typeof ORDER_STATUSES)[number];
@@ -57,6 +58,32 @@ export async function ensureDefaultMarkupSetting() {
 export async function getDefaultMarkup() {
 	const setting = await ensureDefaultMarkupSetting();
 	return new Prisma.Decimal(setting.value || DEFAULT_MARKUP_VALUE);
+}
+
+export async function getSyncCursor() {
+	const setting = await db.anismileSetting.findUnique({
+		where: {
+			key: SYNC_CURSOR_KEY,
+		},
+	});
+	const value = Number.parseInt(setting?.value ?? "0", 10);
+	return Number.isFinite(value) && value >= 0 ? value : 0;
+}
+
+export async function setSyncCursor(offset: number) {
+	const safeOffset = Number.isFinite(offset) && offset >= 0 ? Math.floor(offset) : 0;
+	await db.anismileSetting.upsert({
+		where: {
+			key: SYNC_CURSOR_KEY,
+		},
+		create: {
+			key: SYNC_CURSOR_KEY,
+			value: String(safeOffset),
+		},
+		update: {
+			value: String(safeOffset),
+		},
+	});
 }
 
 export async function getTierSettingsValues(): Promise<{

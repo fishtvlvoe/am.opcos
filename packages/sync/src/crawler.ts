@@ -1,5 +1,11 @@
 // 爬蟲同步主流程 — 使用 @repo/api 爬蟲 + @repo/database 持久化
-import { createSyncLog, finishSyncLog, upsertProductsFromSync } from "@repo/database";
+import {
+	createSyncLog,
+	finishSyncLog,
+	getSyncCursor,
+	setSyncCursor,
+	upsertProductsFromSync,
+} from "@repo/database";
 import { logger } from "@repo/logs";
 
 export type SyncResult = {
@@ -8,8 +14,16 @@ export type SyncResult = {
 	updated: number;
 	skipped: number;
 	errors: number;
+	totalDiscovered: number;
+	batchOffset: number;
+	nextOffset: number;
 	syncLogId: string;
 };
+
+function parsePositiveInteger(value: string | undefined, fallback: number) {
+	const parsed = Number.parseInt(value ?? "", 10);
+	return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
 
 /**
  * 執行完整同步：登入 → 爬取 → 翻譯 → upsert → 更新 SyncLog
@@ -25,9 +39,16 @@ export async function runSync(): Promise<SyncResult> {
 	const syncLog = await createSyncLog();
 
 	try {
+		const batchSize = Math.min(parsePositiveInteger(process.env.ANISMILE_SYNC_BATCH_SIZE, 250), 500);
+		const delayMs = Math.max(0, parsePositiveInteger(process.env.ANISMILE_SYNC_DELAY_MS, 100));
+		const batchOffset = await getSyncCursor();
 		// 動態 import 避免 bundler 在 moduleResolution 模式下的 subpath 解析問題
 		const { crawlAnismileProductsWithStats } = await import("@repo/api/modules/anismile/lib/crawler");
-		const crawlResult = await crawlAnismileProductsWithStats();
+		const crawlResult = await crawlAnismileProductsWithStats({
+			offset: batchOffset,
+			limit: batchSize,
+			delayMs,
+		});
 		const products = crawlResult.products;
 
 		const result = await upsertProductsFromSync(
@@ -68,8 +89,14 @@ export async function runSync(): Promise<SyncResult> {
 					: undefined,
 		});
 
+		const nextOffset =
+			crawlResult.totalDiscovered > 0 && batchOffset + batchSize < crawlResult.totalDiscovered
+				? batchOffset + batchSize
+				: 0;
+		await setSyncCursor(nextOffset);
+
 		logger.info(
-			`[sync] completed: ${result.productsSynced} products (${result.productsAdded} added, ${result.productsUpdated} updated, ${result.productsSkipped + crawlResult.productsSkipped} skipped, ${crawlResult.productsFailed} failed)`,
+			`[sync] completed batch offset=${batchOffset} next=${nextOffset}: ${result.productsSynced} products (${result.productsAdded} added, ${result.productsUpdated} updated, ${result.productsSkipped + crawlResult.productsSkipped} skipped, ${crawlResult.productsFailed} failed)`,
 		);
 
 		return {
@@ -78,6 +105,9 @@ export async function runSync(): Promise<SyncResult> {
 			updated: result.productsUpdated,
 			skipped: result.productsSkipped + crawlResult.productsSkipped,
 			errors: crawlResult.productsFailed,
+			totalDiscovered: crawlResult.totalDiscovered,
+			batchOffset,
+			nextOffset,
 			syncLogId: syncLog.id,
 		};
 	} catch (error) {

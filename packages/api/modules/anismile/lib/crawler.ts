@@ -26,9 +26,17 @@ export type CrawledAnismileProduct = {
 export type AnismileCrawlResult = {
 	products: CrawledAnismileProduct[];
 	totalDiscovered: number;
+	batchOffset: number;
+	batchLimit: number;
 	productsSkipped: number;
 	productsFailed: number;
 	failureReasons: string[];
+};
+
+export type AnismileCrawlOptions = {
+	offset?: number;
+	limit?: number;
+	delayMs?: number;
 };
 
 const LOGIN_URL = "https://www.anismile.jp/login/index";
@@ -69,6 +77,10 @@ function parseProductId(url: string): string {
 
 function parseSitemap(xml: string): string[] {
 	return [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => String(match[1]));
+}
+
+function normalizeProductIds(productIds: string[]): string[] {
+	return Array.from(new Set(productIds)).sort((a, b) => Number(b) - Number(a));
 }
 
 async function fetchText(url: string, init?: RequestInit): Promise<string> {
@@ -137,7 +149,7 @@ async function getProductIds(): Promise<string[]> {
 		itemUrls = rootLinks.filter((item) => item.includes("/item/"));
 	}
 
-	return itemUrls.map(parseProductId).filter(Boolean);
+	return normalizeProductIds(itemUrls.map(parseProductId).filter(Boolean));
 }
 
 type AnismileProductResponse = {
@@ -211,15 +223,24 @@ function parseProductApi(res: AnismileProductResponse, productId?: string): Craw
 
 export { parseProductApi as parseProductApiForTest };
 
-export async function crawlAnismileProductsWithStats(): Promise<AnismileCrawlResult> {
+export async function crawlAnismileProductsWithStats({
+	offset = 0,
+	limit,
+	delayMs = 500,
+}: AnismileCrawlOptions = {}): Promise<AnismileCrawlResult> {
 	const cookie = await getAuthenticatedCookie();
-	const productIds = await getProductIds();
+	const allProductIds = await getProductIds();
+	const safeOffset = Math.max(0, offset);
+	const safeLimit = limit && limit > 0 ? limit : allProductIds.length;
+	const productIds = allProductIds.slice(safeOffset, safeOffset + safeLimit);
 	const products: CrawledAnismileProduct[] = [];
 	let productsSkipped = 0;
 	let productsFailed = 0;
 	const failureReasons: string[] = [];
 
-	logger.info(`[anismile] starting crawl: ${productIds.length} products`);
+	logger.info(
+		`[anismile] starting crawl: ${productIds.length}/${allProductIds.length} products (offset=${safeOffset}, limit=${safeLimit})`,
+	);
 
 	for (const id of productIds) {
 		try {
@@ -246,14 +267,18 @@ export async function crawlAnismileProductsWithStats(): Promise<AnismileCrawlRes
 			logger.error(`[anismile] crawl failed for product ${id}`, error);
 		}
 
-		const delay = 500 + Math.floor(Math.random() * 500);
-		await sleep(delay);
+		if (delayMs > 0) {
+			const delay = delayMs + Math.floor(Math.random() * delayMs);
+			await sleep(delay);
+		}
 	}
 
 	logger.info(`[anismile] crawl complete: ${products.length}/${productIds.length} products`);
 	return {
 		products,
-		totalDiscovered: productIds.length,
+		totalDiscovered: allProductIds.length,
+		batchOffset: safeOffset,
+		batchLimit: safeLimit,
 		productsSkipped,
 		productsFailed,
 		failureReasons,
