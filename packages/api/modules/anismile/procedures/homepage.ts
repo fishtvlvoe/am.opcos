@@ -39,6 +39,19 @@ function normalizeSourceImageUrl(url: string | undefined) {
 	return url;
 }
 
+function normalizeSourceLinkUrl(url: string | undefined) {
+	if (!url) return undefined;
+	if (!url.startsWith(ANISMILE_ORIGIN)) return url;
+
+	const parsed = new URL(url);
+	const searchMatch = parsed.pathname.match(/^\/search\/(.+)\/?$/);
+	if (searchMatch?.[1]) {
+		return `/search?q=${encodeURIComponent(decodeURIComponent(searchMatch[1]))}`;
+	}
+
+	return `${parsed.pathname}${parsed.search}`;
+}
+
 function toImageUrlArray(value: unknown): string[] {
 	return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : [];
 }
@@ -121,9 +134,7 @@ export const getBanners = publicProcedure
 		const banners = (payload.items ?? [])
 			.map((item) => ({
 				imageUrl: normalizeSourceImageUrl(item.file?.url),
-				linkUrl: item.link?.startsWith(ANISMILE_ORIGIN)
-					? item.link.replace(ANISMILE_ORIGIN, "")
-					: item.link,
+				linkUrl: normalizeSourceLinkUrl(item.link),
 			}))
 			.filter((item) => item.imageUrl);
 
