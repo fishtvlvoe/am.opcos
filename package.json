@@ -7,6 +7,7 @@
 		"clean": "git clean -xdf .cache .turbo dist node_modules .next",
 		"dev": "next dev --port 3001",
 		"e2e:visual": "playwright test e2e/visual-diff.spec.ts",
+		"prebuild": "pnpm --filter @repo/database generate",
 		"start": "next start",
 		"type-check": "next typegen && tsc --noEmit"
 	},
