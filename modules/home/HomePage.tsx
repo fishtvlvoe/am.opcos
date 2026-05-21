@@ -13,7 +13,7 @@ import { AnnouncementBanner } from "./components/AnnouncementBanner";
 import { CategoryNav } from "./components/CategoryNav";
 import { DeadlineSection } from "./components/DeadlineSection";
 import { HotSearchTags } from "./components/HotSearchTags";
-import { SeriesCard } from "../catalog/components/SeriesCard";
+import { ProductCard } from "../catalog/components/ProductCard";
 import { FranchiseBanner } from "./components/FranchiseBanner";
 
 // ─── Breadcrumb ──────────────────────────────────────────────────────────────
@@ -88,6 +88,7 @@ type ProductItem = {
 	category: string | null;
 	franchise?: string | null;
 	brand?: string | null;
+	orderDeadline?: Date | string | null;
 };
 
 function groupProductsToSeries(products: ProductItem[]) {
@@ -139,7 +140,7 @@ function ListingSection() {
 
 	return (
 		<section className="mb-12">
-			<h2 className="mb-4 text-lg font-bold text-stone-900">商品系列</h2>
+			<h2 className="mb-4 text-lg font-bold text-stone-900">最新商品</h2>
 			<FranchiseBanner items={franchiseBannerItems} />
 			<div className="mb-4 flex gap-2 overflow-x-auto pb-1 no-scrollbar">
 				{dates.map((date) => (
@@ -160,12 +161,21 @@ function ListingSection() {
 
 			{productsQuery.isPending ? (
 				<div className="py-12 text-center text-muted-foreground">載入中...</div>
-			) : seriesList.length === 0 ? (
+			) : products.length === 0 ? (
 				<p className="text-sm text-stone-500">暫無商品</p>
 			) : (
-				<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-					{seriesList.map((s) => (
-						<SeriesCard key={s.id} series={s} />
+				<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+					{products.map((product, index) => (
+						<ProductCard
+							key={product.id}
+							id={product.id}
+							title={product.title ?? "未命名商品"}
+							price={product.sellingPrice}
+							imageUrl={Array.isArray(product.imageUrls) ? String(product.imageUrls[0] ?? "") : ""}
+							orderDeadline={product.orderDeadline}
+							listingDate={product.listingDate}
+							priority={index < 4}
+						/>
 					))}
 				</div>
 			)}

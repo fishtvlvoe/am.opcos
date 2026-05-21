@@ -34,8 +34,8 @@ describe("DeadlineSection 元件", () => {
 		expect(source).toContain("text-red");
 	});
 
-	it("包含 SeriesCard 元件引用", () => {
+	it("即將截單區塊直接顯示商品卡，讓未登入客戶也能看到商品", () => {
 		const source = read(filePath);
-		expect(source).toContain("SeriesCard");
+		expect(source).toContain("ProductCard");
 	});
 });

@@ -96,6 +96,7 @@ export const getProductsByDate = publicProcedure
 					janCode: true,
 					imageUrls: true,
 					listingDate: true,
+					orderDeadline: true,
 					category: true,
 				},
 				orderBy: { createdAt: "desc" },
@@ -110,6 +111,7 @@ export const getProductsByDate = publicProcedure
 					sellingPrice: null,
 					imageUrls: p.imageUrls,
 					listingDate: p.listingDate?.toISOString() ?? null,
+					orderDeadline: p.orderDeadline?.toISOString() ?? null,
 					category: p.category,
 				})),
 			};

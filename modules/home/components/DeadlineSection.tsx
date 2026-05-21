@@ -4,34 +4,11 @@ import { Button } from "@repo/ui";
 import { orpc } from "@shared/lib/orpc-query-utils";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { SeriesCard } from "../../catalog/components/SeriesCard";
-
-function groupToSeries(products: Array<{ id: string; title: string | null; sellingPrice: number | null; imageUrls: unknown; category: string | null; franchise: string | null; brand: string | null }>) {
-	const groups = new Map<string, { id: string; name: string; ip: string; maker: string; count: number; image?: string }>();
-	for (const p of products) {
-		const key = p.category ?? "其他";
-		const existing = groups.get(key);
-		if (existing) {
-			existing.count++;
-		} else {
-			const firstImage = Array.isArray(p.imageUrls) ? String(p.imageUrls[0] ?? "") : "";
-			groups.set(key, {
-				id: key,
-				name: key,
-				ip: p.franchise ?? "",
-				maker: p.brand ?? "",
-				count: 1,
-				image: firstImage || undefined,
-			});
-		}
-	}
-	return Array.from(groups.values());
-}
+import { ProductCard } from "../../catalog/components/ProductCard";
 
 export function DeadlineSection() {
 	const deadlineQuery = useQuery(orpc.anismile.homepage.getDeadlineProducts.queryOptions({ input: {} }));
 	const products = deadlineQuery.data?.products ?? [];
-	const seriesList = groupToSeries(products);
 
 	if (deadlineQuery.isPending) return null;
 	if (products.length === 0) return null;
@@ -51,8 +28,16 @@ export function DeadlineSection() {
 			)}
 
 			<div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-				{seriesList.map((s) => (
-					<SeriesCard key={s.id} series={s} />
+				{products.map((product, index) => (
+					<ProductCard
+						key={product.id}
+						id={product.id}
+						title={product.title ?? "未命名商品"}
+						price={product.sellingPrice}
+						imageUrl={Array.isArray(product.imageUrls) ? String(product.imageUrls[0] ?? "") : ""}
+						orderDeadline={product.orderDeadline}
+						priority={index < 4}
+					/>
 				))}
 			</div>
 

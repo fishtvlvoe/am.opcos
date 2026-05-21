@@ -28,6 +28,7 @@ type ProductCardProps = {
 	onAddToCart?: (quantity: number) => void;
 	onToggleWishlist?: () => void;
 	wishlisted?: boolean;
+	priority?: boolean;
 };
 
 function getSaleStatusBadgeClass(status: string | null) {
@@ -57,6 +58,7 @@ export function ProductCard({
 	onAddToCart,
 	onToggleWishlist,
 	wishlisted,
+	priority = false,
 }: ProductCardProps) {
 	const { user } = useSession();
 	const [quantity, setQuantity] = useState(1);
@@ -75,7 +77,16 @@ export function ProductCard({
 		<div className={cn("card-hover overflow-hidden rounded-xl border border-stone-200 bg-white", className)}>
 			<Link href={`/products/${id}`} className="block">
 				<div className="relative aspect-[4/3] bg-stone-100">
-					{imageUrl ? <Image src={imageUrl} alt={title} fill className="object-cover" /> : null}
+					{imageUrl ? (
+						<Image
+							src={imageUrl}
+							alt={title}
+							fill
+							priority={priority}
+							sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
+							className="object-cover"
+						/>
+					) : null}
 					{isUrgent && (
 						<div className="absolute inset-x-0 top-0 bg-red-500 px-2 py-0.5 text-center text-[11px] font-semibold text-white">
 							即將截單

@@ -35,7 +35,7 @@ export function CartItem({
 		<div className="rounded-xl border border-stone-200 bg-white p-4">
 			<div className="flex gap-4">
 				<div className="relative size-20 shrink-0 overflow-hidden rounded-lg bg-stone-100">
-					{imageUrl ? <Image src={imageUrl} alt={title} fill className="object-cover" /> : null}
+					{imageUrl ? <Image src={imageUrl} alt={title} fill sizes="80px" className="object-cover" /> : null}
 				</div>
 
 				<div className="min-w-0 flex-1 space-y-2">

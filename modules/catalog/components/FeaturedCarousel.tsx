@@ -68,7 +68,7 @@ export function FeaturedCarousel({ products }: FeaturedCarouselProps) {
 							<div className="overflow-hidden rounded-xl border border-stone-200 bg-white transition-shadow hover:shadow-md">
 								<div className="relative aspect-square bg-stone-100">
 									{p.imageUrl ? (
-										<Image src={p.imageUrl} alt={p.title} fill className="object-cover" />
+										<Image src={p.imageUrl} alt={p.title} fill sizes="(max-width: 768px) 80vw, 360px" className="object-cover" />
 									) : (
 										<div className="flex size-full items-center justify-center text-xs text-stone-500">商品圖片</div>
 									)}

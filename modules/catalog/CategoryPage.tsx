@@ -219,7 +219,7 @@ export function CategoryPage({ slug }: { slug: string }) {
 							</>
 						) : (
 							<div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-								{items.map((item) => (
+								{items.map((item, index) => (
 									<ProductCard
 										key={item.id}
 										id={item.id}
@@ -228,6 +228,7 @@ export function CategoryPage({ slug }: { slug: string }) {
 										imageUrl={Array.isArray(item.imageUrls) ? String(item.imageUrls[0] ?? "") : ""}
 										orderDeadline={item.orderDeadline}
 										listingDate={item.listingDate}
+										priority={index < 4}
 									/>
 								))}
 							</div>
