@@ -10,7 +10,7 @@ type FeaturedProduct = {
 	id: string;
 	title: string;
 	imageUrl?: string | null;
-	sellingPrice: number;
+	sellingPrice: number | null;
 	originalPrice?: number | null;
 	discountRate?: number | null;
 };
@@ -81,7 +81,9 @@ export function FeaturedCarousel({ products }: FeaturedCarouselProps) {
 										)}
 									</div>
 									<div className="flex items-center gap-2 text-sm">
-										<span className="font-semibold text-stone-900">¥{p.sellingPrice}</span>
+										<span className="font-semibold text-stone-900">
+											{p.sellingPrice === null ? "登入查看價格" : `¥${p.sellingPrice}`}
+										</span>
 										{p.discountRate && (
 											<span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
 												{Math.round(p.discountRate * 100)}折

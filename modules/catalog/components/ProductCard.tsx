@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "@auth/hooks/use-session";
 import { cn } from "@repo/ui";
 import { differenceInCalendarDays, format } from "date-fns";
 import { Heart, MinusIcon, PlusIcon, ShoppingCart } from "lucide-react";
@@ -13,7 +14,7 @@ import { DeadlineBadge } from "./DeadlineBadge";
 type ProductCardProps = {
 	id: string;
 	title: string;
-	price: number;
+	price: number | null;
 	originalPrice?: number | null;
 	sellingPrice?: number | null;
 	discountRate?: number | null;
@@ -57,16 +58,18 @@ export function ProductCard({
 	onToggleWishlist,
 	wishlisted,
 }: ProductCardProps) {
+	const { user } = useSession();
 	const [quantity, setQuantity] = useState(1);
 	const [isFavorited, setIsFavorited] = useState(wishlisted ?? false);
 	const listingLabel = listingDate ? format(new Date(listingDate), "M/d") : null;
 	const isNewProduct = listingDate ? (Date.now() - new Date(listingDate).getTime()) / (1000 * 60 * 60 * 24) <= 7 : false;
 	const currentSellingPrice = sellingPrice ?? price;
+	const canOrder = !!user && currentSellingPrice !== null;
 	const isPastDeadline = orderDeadline ? new Date(orderDeadline).getTime() < Date.now() : false;
 	const daysLeft = orderDeadline ? differenceInCalendarDays(new Date(orderDeadline), new Date()) : null;
 	const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
 	const normalizedSaleStatus = isPastDeadline ? "已截止" : (saleStatus ?? null);
-	const addDisabled = normalizedSaleStatus === "已截止";
+	const addDisabled = normalizedSaleStatus === "已截止" || !canOrder;
 
 	return (
 		<div className={cn("card-hover overflow-hidden rounded-xl border border-stone-200 bg-white", className)}>
@@ -102,7 +105,11 @@ export function ProductCard({
 							<p className="text-sm text-muted-foreground line-through">¥ {originalPrice.toFixed(2)}</p>
 						) : null}
 						<div className="flex items-center gap-2">
-							<p className="font-bold text-base text-stone-900">¥ {currentSellingPrice.toFixed(2)}</p>
+							{currentSellingPrice === null ? (
+								<p className="font-semibold text-sm text-stone-600">登入查看價格</p>
+							) : (
+								<p className="font-bold text-base text-stone-900">¥ {currentSellingPrice.toFixed(2)}</p>
+							)}
 							{discountRate !== null && discountRate !== undefined ? (
 								<span className="inline-flex items-center rounded-md bg-red-100 px-1.5 py-0.5 text-[11px] font-medium text-red-700">
 									{Math.round(discountRate * 100)}折
@@ -128,7 +135,8 @@ export function ProductCard({
 				</div>
 			</Link>
 			<div className="border-t border-stone-100 px-3 pb-3 pt-2">
-				<div className="flex items-center gap-1">
+				{canOrder ? (
+					<div className="flex items-center gap-1">
 					<div className="inline-flex items-center rounded-md border border-stone-200">
 						<button
 							type="button"
@@ -175,7 +183,15 @@ export function ProductCard({
 					>
 						<ShoppingCart className="size-3.5" />
 					</button>
-				</div>
+					</div>
+				) : (
+					<Link
+						href="/login"
+						className="block rounded-md border border-stone-200 px-3 py-2 text-center text-sm font-medium text-stone-700 hover:bg-stone-50"
+					>
+						登入後下單
+					</Link>
+				)}
 			</div>
 		</div>
 	);

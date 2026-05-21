@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { SeriesCard } from "../../catalog/components/SeriesCard";
 
-function groupToSeries(products: Array<{ id: string; title: string | null; sellingPrice: number; imageUrls: unknown; category: string | null; franchise: string | null; brand: string | null }>) {
+function groupToSeries(products: Array<{ id: string; title: string | null; sellingPrice: number | null; imageUrls: unknown; category: string | null; franchise: string | null; brand: string | null }>) {
 	const groups = new Map<string, { id: string; name: string; ip: string; maker: string; count: number; image?: string }>();
 	for (const p of products) {
 		const key = p.category ?? "其他";

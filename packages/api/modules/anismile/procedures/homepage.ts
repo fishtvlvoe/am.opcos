@@ -1,7 +1,7 @@
 import { db } from "@repo/database";
 import { z } from "zod";
 
-import { protectedProcedure } from "../../../orpc/procedures";
+import { publicProcedure } from "../../../orpc/procedures";
 
 // Banner 資料結構
 interface BannerItem {
@@ -10,7 +10,7 @@ interface BannerItem {
 }
 
 // 取得首頁 Banner 列表
-export const getBanners = protectedProcedure
+export const getBanners = publicProcedure
 	.route({
 		method: "GET",
 		path: "/anismile/homepage/banners",
@@ -36,7 +36,7 @@ export const getBanners = protectedProcedure
 	});
 
 // 取得近 7 天有商品的上架日期列表
-export const getListingDates = protectedProcedure
+export const getListingDates = publicProcedure
 	.route({
 		method: "GET",
 		path: "/anismile/homepage/listing-dates",
@@ -68,7 +68,7 @@ export const getListingDates = protectedProcedure
 	});
 
 // 依上架日期取得商品列表
-export const getProductsByDate = protectedProcedure
+export const getProductsByDate = publicProcedure
 	.route({
 		method: "GET",
 		path: "/anismile/homepage/products-by-date",
@@ -94,7 +94,6 @@ export const getProductsByDate = protectedProcedure
 					id: true,
 					titleTranslated: true,
 					janCode: true,
-					sellingPrice: true,
 					imageUrls: true,
 					listingDate: true,
 					category: true,
@@ -108,7 +107,7 @@ export const getProductsByDate = protectedProcedure
 					id: p.id,
 					title: p.titleTranslated,
 					janCode: p.janCode,
-					sellingPrice: Number(p.sellingPrice),
+					sellingPrice: null,
 					imageUrls: p.imageUrls,
 					listingDate: p.listingDate?.toISOString() ?? null,
 					category: p.category,
@@ -121,7 +120,7 @@ export const getProductsByDate = protectedProcedure
 	});
 
 // 取得即將截止（7 天內）的商品
-export const getDeadlineProducts = protectedProcedure
+export const getDeadlineProducts = publicProcedure
 	.route({
 		method: "GET",
 		path: "/anismile/homepage/deadline-products",
@@ -141,7 +140,6 @@ export const getDeadlineProducts = protectedProcedure
 			select: {
 				id: true,
 				titleTranslated: true,
-				sellingPrice: true,
 				imageUrls: true,
 				orderDeadline: true,
 				category: true,
@@ -156,7 +154,7 @@ export const getDeadlineProducts = protectedProcedure
 			products: products.map((p) => ({
 				id: p.id,
 				title: p.titleTranslated,
-				sellingPrice: Number(p.sellingPrice),
+				sellingPrice: null,
 				imageUrls: p.imageUrls,
 				orderDeadline: p.orderDeadline?.toISOString() ?? null,
 				category: p.category,

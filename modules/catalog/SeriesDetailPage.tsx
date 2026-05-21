@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "@auth/hooks/use-session";
 import { Button, cn, toastError, toastSuccess } from "@repo/ui";
 import { orpc } from "@shared/lib/orpc-query-utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -34,6 +35,7 @@ function Breadcrumb({ seriesName }: { seriesName: string }) {
 }
 
 export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
+	const { user } = useSession();
 	const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 	const [sortField, setSortField] = useState("name");
 	const [pageSize, setPageSize] = useState(20);
@@ -55,9 +57,10 @@ export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
 		}),
 	);
 
-	const wishlistQuery = useQuery(
-		orpc.anismile.wishlist.list.queryOptions({ input: { sort: "recent", filter: "all" } }),
-	);
+	const wishlistQuery = useQuery({
+		...orpc.anismile.wishlist.list.queryOptions({ input: { sort: "recent", filter: "all" } }),
+		enabled: !!user,
+	});
 
 	const addWishlistMutation = useMutation(
 		orpc.anismile.wishlist.add.mutationOptions({

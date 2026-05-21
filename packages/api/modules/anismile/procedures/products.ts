@@ -1,4 +1,5 @@
 import { ORPCError } from "@orpc/server";
+import { auth } from "@repo/auth";
 import {
 	db,
 	getAnismileProductById,
@@ -13,6 +14,15 @@ import { z } from "zod";
 
 import { anismileAdminProcedure, protectedProcedure, publicProcedure } from "../../../orpc/procedures";
 import { toNumber, toNumberRequired } from "../lib/serialize";
+
+async function canSeePricing(headers: Headers) {
+	const session = await auth.api.getSession({ headers });
+	return !!session;
+}
+
+function publicPrice<T extends number>(value: T, visible: boolean): T | null {
+	return visible ? value : null;
+}
 
 const listProductsInput = z.object({
 	category: z.string().min(1).optional(),
@@ -34,7 +44,8 @@ export const listProducts = publicProcedure
 		summary: "List products",
 	})
 	.input(listProductsInput)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const showPrices = await canSeePricing(context.headers);
 		const listingDate = input.listingDate ? new Date(input.listingDate) : undefined;
 		const result = await listAnismileProducts({
 			page: input.page,
@@ -57,7 +68,7 @@ export const listProducts = publicProcedure
 				imageUrls: item.imageUrls,
 				category: item.category,
 				series: item.series,
-				sellingPrice: toNumberRequired(item.sellingPrice),
+				sellingPrice: publicPrice(toNumberRequired(item.sellingPrice), showPrices),
 				listingDate: item.listingDate,
 					orderDeadline: item.orderDeadline,
 					inStock: item.inStock,
@@ -116,20 +127,21 @@ export const listLatestProducts = publicProcedure
 		summary: "List latest products",
 	})
 	.input(z.object({ limit: z.number().int().min(1).max(100).default(20) }))
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const showPrices = await canSeePricing(context.headers);
 		const items = await listLatestAnismileProducts(input.limit);
 		return items.map((item) => ({
 			id: item.id,
 			titleTranslated: item.titleTranslated,
 			titleOriginal: item.titleOriginal,
 			imageUrls: item.imageUrls,
-			sellingPrice: toNumberRequired(item.sellingPrice),
+			sellingPrice: publicPrice(toNumberRequired(item.sellingPrice), showPrices),
 			listingDate: item.listingDate,
 			orderDeadline: item.orderDeadline,
 		}));
 	});
 
-export const getProductById = protectedProcedure
+export const getProductById = publicProcedure
 	.route({
 		method: "GET",
 		path: "/anismile/products/{id}",
@@ -137,7 +149,8 @@ export const getProductById = protectedProcedure
 		summary: "Get product detail",
 	})
 	.input(z.object({ id: z.string().min(1) }))
-	.handler(async ({ input: { id } }) => {
+	.handler(async ({ input: { id }, context }) => {
+		const showPrices = await canSeePricing(context.headers);
 		const product = await getAnismileProductById(id);
 		if (!product) {
 			throw new ORPCError("NOT_FOUND", { message: "Product not found" });
@@ -145,6 +158,8 @@ export const getProductById = protectedProcedure
 
 		return {
 			id: product.id,
+			supplierId: product.supplierId,
+			sourceUrl: product.sourceUrl ?? null,
 			titleOriginal: product.titleOriginal,
 			titleTranslated: product.titleTranslated,
 			descriptionTranslated: product.descriptionTranslated,
@@ -155,11 +170,11 @@ export const getProductById = protectedProcedure
 			brand: product.brand ?? null,
 			franchise: product.franchise ?? null,
 			boxSpec: product.boxSpec ?? null,
-			originalPrice: product.originalPrice ? Number(product.originalPrice) : null,
-			costPrice: product.costPrice ? Number(product.costPrice) : null,
-			discountRate: product.discountRate ? Number(product.discountRate) : null,
+			originalPrice: showPrices && product.originalPrice ? Number(product.originalPrice) : null,
+			costPrice: showPrices && product.costPrice ? Number(product.costPrice) : null,
+			discountRate: showPrices && product.discountRate ? Number(product.discountRate) : null,
 			saleStatus: product.saleStatus ?? null,
-			sellingPrice: toNumberRequired(product.sellingPrice),
+			sellingPrice: publicPrice(toNumberRequired(product.sellingPrice), showPrices),
 			listingDate: product.listingDate,
 			orderDeadline: product.orderDeadline,
 			releaseDate: product.releaseDate ?? null,
@@ -254,6 +269,7 @@ const productFiltersShape = z.object({
 function serializeProduct(p: {
 	id: string;
 	supplierId: string;
+	sourceUrl: string | null;
 	titleOriginal: string;
 	titleTranslated: string;
 	imageUrls: unknown;
@@ -271,10 +287,11 @@ function serializeProduct(p: {
 	listingDate: Date | null;
 	orderDeadline: Date | null;
 	releaseDate: Date | null;
-}) {
+}, showPrices: boolean) {
 	return {
 		id: p.id,
 		supplierId: p.supplierId,
+		sourceUrl: p.sourceUrl,
 		titleOriginal: p.titleOriginal,
 		titleTranslated: p.titleTranslated,
 		imageUrls: p.imageUrls as string[],
@@ -283,10 +300,10 @@ function serializeProduct(p: {
 		janCode: p.janCode,
 		brand: p.brand,
 		franchise: p.franchise,
-		originalPrice: p.originalPrice ? toNumber(p.originalPrice) : null,
-		costPrice: toNumberRequired(p.costPrice),
-		sellingPrice: toNumberRequired(p.sellingPrice),
-		discountRate: p.discountRate ? toNumber(p.discountRate) : null,
+		originalPrice: showPrices && p.originalPrice ? toNumber(p.originalPrice) : null,
+		costPrice: showPrices ? toNumberRequired(p.costPrice) : null,
+		sellingPrice: publicPrice(toNumberRequired(p.sellingPrice), showPrices),
+		discountRate: showPrices && p.discountRate ? toNumber(p.discountRate) : null,
 		saleStatus: p.saleStatus,
 		boxSpec: p.boxSpec,
 		listingDate: p.listingDate?.toISOString() ?? null,
@@ -311,10 +328,11 @@ export const searchProducts = publicProcedure
 			perPage: z.number().int().min(1).max(100).optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const showPrices = await canSeePricing(context.headers);
 		const result = await searchAnismileProducts(input);
 		return {
-			items: result.items.map(serializeProduct),
+			items: result.items.map((item) => serializeProduct(item, showPrices)),
 			total: result.total,
 			facets: result.facets,
 		};
@@ -344,10 +362,11 @@ export const listByCategory = publicProcedure
 			perPage: z.number().int().min(1).max(100).optional(),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const showPrices = await canSeePricing(context.headers);
 		const result = await listProductsByCategory(input);
 		return {
-			items: result.items.map(serializeProduct),
+			items: result.items.map((item) => serializeProduct(item, showPrices)),
 			total: result.total,
 			facets: result.facets,
 		};

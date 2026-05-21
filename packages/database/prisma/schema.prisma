@@ -297,6 +297,7 @@ model UserNotificationPreference {
 model AnismileProduct {
   id                    String                 @id @default(cuid())
   supplierId            String                 @unique @map("supplier_id")
+  sourceUrl             String?                @map("source_url")
   titleOriginal         String                 @map("title_original")
   titleTranslated       String                 @map("title_translated")
   descriptionOriginal   String?                @map("description_original")
@@ -410,6 +411,8 @@ model AnismileSyncLog {
   productsSynced  Int       @default(0) @map("products_synced")
   productsAdded   Int       @default(0) @map("products_added")
   productsUpdated Int       @default(0) @map("products_updated")
+  productsSkipped Int       @default(0) @map("products_skipped")
+  productsFailed  Int       @default(0) @map("products_failed")
   errorMessage    String?   @map("error_message")
 
   @@map("anismile_sync_logs")

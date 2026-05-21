@@ -4,6 +4,7 @@ import { toTraditionalChinese } from "./opencc";
 
 export type CrawledAnismileProduct = {
 	supplierId: string;
+	sourceUrl: string | null;
 	titleOriginal: string;
 	titleTranslated: string;
 	descriptionOriginal: string | null;
@@ -22,9 +23,18 @@ export type CrawledAnismileProduct = {
 	releaseDate: Date | null;
 };
 
+export type AnismileCrawlResult = {
+	products: CrawledAnismileProduct[];
+	totalDiscovered: number;
+	productsSkipped: number;
+	productsFailed: number;
+	failureReasons: string[];
+};
+
 const LOGIN_URL = "https://www.anismile.jp/login/index";
 const PRODUCT_API_URL = "https://www.anismile.jp/product/index";
 const SITEMAP_URL = "https://www.anismile.jp/sitemap.xml";
+const PRODUCT_PAGE_BASE_URL = "https://www.anismile.jp/item";
 
 function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
@@ -149,7 +159,7 @@ type AnismileProductResponse = {
 	};
 };
 
-function parseProductApi(res: AnismileProductResponse): CrawledAnismileProduct | null {
+function parseProductApi(res: AnismileProductResponse, productId?: string): CrawledAnismileProduct | null {
 	if (res.code !== 1 || !res.item) return null;
 
 	const item = res.item;
@@ -179,6 +189,7 @@ function parseProductApi(res: AnismileProductResponse): CrawledAnismileProduct |
 
 	return {
 		supplierId,
+		sourceUrl: productId ? `${PRODUCT_PAGE_BASE_URL}/${productId}/` : null,
 		titleOriginal,
 		titleTranslated: toTraditionalChinese(titleOriginal),
 		descriptionOriginal: item.description || null,
@@ -200,10 +211,13 @@ function parseProductApi(res: AnismileProductResponse): CrawledAnismileProduct |
 
 export { parseProductApi as parseProductApiForTest };
 
-export async function crawlAnismileProducts(): Promise<CrawledAnismileProduct[]> {
+export async function crawlAnismileProductsWithStats(): Promise<AnismileCrawlResult> {
 	const cookie = await getAuthenticatedCookie();
 	const productIds = await getProductIds();
 	const products: CrawledAnismileProduct[] = [];
+	let productsSkipped = 0;
+	let productsFailed = 0;
+	const failureReasons: string[] = [];
 
 	logger.info(`[anismile] starting crawl: ${productIds.length} products`);
 
@@ -218,11 +232,17 @@ export async function crawlAnismileProducts(): Promise<CrawledAnismileProduct[]>
 				body: new URLSearchParams({ item: id, lang: "cn" }),
 			});
 
-			const parsed = parseProductApi(res);
+			const parsed = parseProductApi(res, id);
 			if (parsed) {
 				products.push(parsed);
+			} else {
+				productsSkipped += 1;
+				failureReasons.push(`product ${id}: empty or invalid product payload`);
 			}
 		} catch (error) {
+			productsFailed += 1;
+			const message = error instanceof Error ? error.message : "unknown error";
+			failureReasons.push(`product ${id}: ${message}`);
 			logger.error(`[anismile] crawl failed for product ${id}`, error);
 		}
 
@@ -231,5 +251,16 @@ export async function crawlAnismileProducts(): Promise<CrawledAnismileProduct[]>
 	}
 
 	logger.info(`[anismile] crawl complete: ${products.length}/${productIds.length} products`);
-	return products;
+	return {
+		products,
+		totalDiscovered: productIds.length,
+		productsSkipped,
+		productsFailed,
+		failureReasons,
+	};
+}
+
+export async function crawlAnismileProducts(): Promise<CrawledAnismileProduct[]> {
+	const result = await crawlAnismileProductsWithStats();
+	return result.products;
 }

@@ -65,6 +65,9 @@ export function AdminSyncPage() {
 						<TableHead>同步數</TableHead>
 						<TableHead>新增</TableHead>
 						<TableHead>更新</TableHead>
+						<TableHead>跳過</TableHead>
+						<TableHead>失敗</TableHead>
+						<TableHead>原因</TableHead>
 						<TableHead>耗時</TableHead>
 					</TableRow>
 				</TableHeader>
@@ -83,6 +86,11 @@ export function AdminSyncPage() {
 								<TableCell>{row.productsSynced}</TableCell>
 								<TableCell>{row.productsAdded}</TableCell>
 								<TableCell>{row.productsUpdated}</TableCell>
+								<TableCell>{row.productsSkipped}</TableCell>
+								<TableCell>{row.productsFailed}</TableCell>
+								<TableCell className="max-w-[260px] truncate" title={row.errorMessage ?? undefined}>
+									{row.errorMessage ?? "-"}
+								</TableCell>
 								<TableCell>{formatElapsed(row.startedAt, row.finishedAt)}</TableCell>
 							</TableRow>
 						);

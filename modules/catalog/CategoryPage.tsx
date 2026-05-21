@@ -25,7 +25,7 @@ import Link from "next/link";
 import { parseAsBoolean, parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
-import { ProductCard } from "../../../../modules/catalog/components/ProductCard";
+import { ProductCard } from "./components/ProductCard";
 
 const PER_PAGE = 24;
 
@@ -37,7 +37,7 @@ const sortOptions = [
 	{ value: "newest", label: "最新" },
 ] as const;
 
-export default function CategoryPage({ params }: { params: { slug: string } }) {
+export function CategoryPage({ slug }: { slug: string }) {
 	const [franchise, setFranchise] = useQueryState("franchise", parseAsString.withDefault(""));
 	const [brand, setBrand] = useQueryState("brand", parseAsString.withDefault(""));
 	const [sort, setSort] = useQueryState("sort", parseAsString.withDefault("relevance"));
@@ -65,8 +65,8 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
 
 	const productsQuery = useQuery(
 		orpc.anismile.products.listByCategory.queryOptions({
-			input: {
-				slug: params.slug,
+				input: {
+				slug,
 				filters,
 				sort: sort || undefined,
 				page: page ?? 1,
@@ -93,12 +93,12 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
 					首頁
 				</Link>
 				<span className="mx-2">&gt;</span>
-				<span>{params.slug}</span>
+				<span>{slug}</span>
 			</div>
 
 			<div className="flex items-end justify-between gap-4">
 				<div className="space-y-1">
-					<h1 className="font-semibold text-2xl">{params.slug}</h1>
+					<h1 className="font-semibold text-2xl">{slug}</h1>
 					<span className="text-sm text-muted-foreground">共 {total} 件商品</span>
 				</div>
 
@@ -202,7 +202,9 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
 															{title}
 														</Link>
 													</TableCell>
-													<TableCell>¥ {Number(item.sellingPrice).toFixed(2)}</TableCell>
+													<TableCell>
+														{item.sellingPrice === null ? "登入查看價格" : `¥ ${Number(item.sellingPrice).toFixed(2)}`}
+													</TableCell>
 													<TableCell>
 														{inStock === undefined ? "-" : inStock ? "有庫存" : "無庫存"}
 													</TableCell>
@@ -222,7 +224,7 @@ export default function CategoryPage({ params }: { params: { slug: string } }) {
 										key={item.id}
 										id={item.id}
 										title={item.titleTranslated || item.titleOriginal}
-										price={Number(item.sellingPrice)}
+										price={item.sellingPrice}
 										imageUrl={Array.isArray(item.imageUrls) ? String(item.imageUrls[0] ?? "") : ""}
 										orderDeadline={item.orderDeadline}
 										listingDate={item.listingDate}

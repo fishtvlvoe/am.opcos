@@ -1,14 +1,16 @@
 import { createSyncLog, finishSyncLog, listSyncLogs, upsertProductsFromSync } from "@repo/database";
 
 import { anismileAdminProcedure } from "../../../orpc/procedures";
-import { crawlAnismileProducts } from "../lib/crawler";
+import { crawlAnismileProductsWithStats } from "../lib/crawler";
 
 export async function runAnismileSyncJob(syncLogId: string) {
 	try {
-		const crawledProducts = await crawlAnismileProducts();
+		const crawlResult = await crawlAnismileProductsWithStats();
+		const crawledProducts = crawlResult.products;
 		const syncResult = await upsertProductsFromSync(
 			crawledProducts.map((item) => ({
 				supplierId: item.supplierId,
+				sourceUrl: item.sourceUrl,
 				titleOriginal: item.titleOriginal,
 				titleTranslated: item.titleTranslated,
 				descriptionOriginal: item.descriptionOriginal,
@@ -30,6 +32,12 @@ export async function runAnismileSyncJob(syncLogId: string) {
 			productsSynced: syncResult.productsSynced,
 			productsAdded: syncResult.productsAdded,
 			productsUpdated: syncResult.productsUpdated,
+			productsSkipped: syncResult.productsSkipped + crawlResult.productsSkipped,
+			productsFailed: crawlResult.productsFailed,
+			errorMessage:
+				crawlResult.failureReasons.length > 0
+					? crawlResult.failureReasons.slice(0, 20).join("\n")
+					: undefined,
 		});
 	} catch (error) {
 		await finishSyncLog({
@@ -38,6 +46,8 @@ export async function runAnismileSyncJob(syncLogId: string) {
 			productsSynced: 0,
 			productsAdded: 0,
 			productsUpdated: 0,
+			productsSkipped: 0,
+			productsFailed: 1,
 			errorMessage: error instanceof Error ? error.message : "Unknown error",
 		});
 	}

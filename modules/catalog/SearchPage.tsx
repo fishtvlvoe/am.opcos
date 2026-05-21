@@ -14,7 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
 
-import { ProductCard } from "../../../modules/catalog/components/ProductCard";
+import { ProductCard } from "./components/ProductCard";
 
 const PER_PAGE = 24;
 
@@ -26,7 +26,7 @@ const sortOptions = [
 	{ value: "newest", label: "最新" },
 ] as const;
 
-export default function SearchPage() {
+export function SearchPage() {
 	const [q] = useQueryState("q", parseAsString.withDefault(""));
 	const [category, setCategory] = useQueryState("category", parseAsString.withDefault(""));
 	const [franchise, setFranchise] = useQueryState("franchise", parseAsString.withDefault(""));
@@ -130,7 +130,7 @@ export default function SearchPage() {
 									key={item.id}
 									id={item.id}
 									title={item.titleTranslated || item.titleOriginal}
-									price={Number(item.sellingPrice)}
+									price={item.sellingPrice}
 									imageUrl={Array.isArray(item.imageUrls) ? String(item.imageUrls[0] ?? "") : ""}
 									orderDeadline={item.orderDeadline}
 									listingDate={item.listingDate}

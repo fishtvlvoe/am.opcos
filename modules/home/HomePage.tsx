@@ -82,7 +82,7 @@ type ProductItem = {
 	id: string;
 	title: string | null;
 	janCode: string | null;
-	sellingPrice: number;
+	sellingPrice: number | null;
 	imageUrls: unknown;
 	listingDate: Date | string | null;
 	category: string | null;

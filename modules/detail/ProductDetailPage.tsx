@@ -20,9 +20,13 @@ export function ProductDetailPage({ id }: { id: string }) {
 	const [quantity, setQuantity] = useState(1);
 
 	const tierQuery = useQuery(
-		orpc.anismile.memberTier.getMyTier.queryOptions({ input: {} }),
+		{
+			...orpc.anismile.memberTier.getMyTier.queryOptions({ input: {} }),
+			enabled: !!user,
+		},
 	);
 	const tier = tierQuery.data?.tier ?? null;
+	const canSeePricing = !!user;
 
 	const productQuery = useQuery(
 		orpc.anismile.products.getById.queryOptions({
@@ -37,9 +41,10 @@ export function ProductDetailPage({ id }: { id: string }) {
 		}),
 	);
 
-	const wishlistQuery = useQuery(
-		orpc.anismile.wishlist.list.queryOptions({ input: { sort: "recent", filter: "all" } }),
-	);
+	const wishlistQuery = useQuery({
+		...orpc.anismile.wishlist.list.queryOptions({ input: { sort: "recent", filter: "all" } }),
+		enabled: !!user,
+	});
 	const isInWishlist = useMemo(() => {
 		const items = wishlistQuery.data && "items" in wishlistQuery.data ? wishlistQuery.data.items : [];
 		return items.some((item: any) => item.productId === id);
@@ -122,6 +127,20 @@ export function ProductDetailPage({ id }: { id: string }) {
 				: "bg-stone-100 text-stone-500";
 
 	const attributeRows = [
+		{ label: "來源 ID", value: product.supplierId },
+		{
+			label: "來源頁",
+			value: product.sourceUrl ? (
+				<a
+					href={product.sourceUrl}
+					target="_blank"
+					rel="noreferrer"
+					className="text-primary hover:underline"
+				>
+					anismile.jp
+				</a>
+			) : null,
+		},
 		{ label: "JAN Code", value: product.janCode },
 		{ label: "品牌", value: product.brand },
 		{ label: "作品", value: product.franchise },
@@ -129,14 +148,14 @@ export function ProductDetailPage({ id }: { id: string }) {
 		{
 			label: "原價",
 			value:
-				product.originalPrice !== null && product.originalPrice !== undefined ? (
+				canSeePricing && product.originalPrice !== null && product.originalPrice !== undefined ? (
 					<span className="line-through text-stone-500">¥ {Number(product.originalPrice).toFixed(2)}</span>
 				) : null,
 		},
 		{
 			label: "折扣率",
 			value:
-				product.discountRate !== null && product.discountRate !== undefined ? (
+				canSeePricing && product.discountRate !== null && product.discountRate !== undefined ? (
 					<span className="inline-flex items-center rounded-md bg-red-100 px-1.5 py-0.5 text-[11px] font-medium text-red-700">
 						{Math.round(Number(product.discountRate) * 100)}折
 					</span>
@@ -196,12 +215,12 @@ export function ProductDetailPage({ id }: { id: string }) {
 						</Link>
 					)}
 					<div className="space-y-1">
-						{product.originalPrice !== null && product.originalPrice !== undefined ? (
+						{canSeePricing && product.originalPrice !== null && product.originalPrice !== undefined ? (
 							<p className="text-sm text-stone-400 line-through">
 								零售參考價 ¥{Number(product.originalPrice).toFixed(2)}
 							</p>
 						) : null}
-						{product.costPrice !== null && product.costPrice !== undefined ? (
+						{canSeePricing && product.costPrice !== null && product.costPrice !== undefined ? (
 							<div className="flex items-center gap-2">
 								<p className="text-2xl font-bold text-red-600">
 									批發價 ¥{Number(product.costPrice).toFixed(2)}
@@ -212,11 +231,15 @@ export function ProductDetailPage({ id }: { id: string }) {
 									</span>
 								) : null}
 							</div>
-						) : null}
+						) : (
+							<p className="text-base font-semibold text-stone-700">登入查看價格與會員折扣</p>
+						)}
 						<div className="flex flex-wrap items-center gap-2">
-							<p className="text-sm text-stone-500">
-								我方售價 ¥{Number(product.sellingPrice).toFixed(2)} 含加成
-							</p>
+							{canSeePricing && product.sellingPrice !== null ? (
+								<p className="text-sm text-stone-500">
+									我方售價 ¥{Number(product.sellingPrice).toFixed(2)} 含加成
+								</p>
+							) : null}
 							{tier === "WHOLESALE" ? (
 								<span className="inline-flex items-center rounded-md bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-700">
 									批發折扣 {Math.round((tierQuery.data?.discount ?? 0.03) * 100)}%
@@ -263,11 +286,21 @@ export function ProductDetailPage({ id }: { id: string }) {
 					) : null}
 
 					<div className="flex items-center gap-3">
-						<QuantitySelector value={quantity} onChange={setQuantity} />
-						<span className="text-sm text-stone-600">{quantity} 件</span>
+						{user ? (
+							<>
+								<QuantitySelector value={quantity} onChange={setQuantity} />
+								<span className="text-sm text-stone-600">{quantity} 件</span>
+							</>
+						) : null}
 						<button
 							type="button"
 							onClick={() => {
+								if (!user) {
+									const opcosUrl = process.env.NEXT_PUBLIC_OPCOS_URL ?? "";
+									const redirectPath = encodeURIComponent(`/products/${product.id}`);
+									router.push(`${opcosUrl}/login?redirect=${redirectPath}`);
+									return;
+								}
 								if (isInWishlist) {
 									removeWishlistMutation.mutate({ productId: id });
 								} else {
@@ -316,7 +349,9 @@ export function ProductDetailPage({ id }: { id: string }) {
 								</div>
 								<div className="p-2">
 									<p className="line-clamp-2 text-xs text-stone-800">{rp.titleTranslated ?? rp.titleOriginal}</p>
-									<p className="mt-1 text-sm font-bold text-stone-900">¥ {Number(rp.sellingPrice).toFixed(2)}</p>
+									<p className="mt-1 text-sm font-bold text-stone-900">
+										{rp.sellingPrice === null ? "登入查看價格" : `¥ ${Number(rp.sellingPrice).toFixed(2)}`}
+									</p>
 								</div>
 							</Link>
 						))}

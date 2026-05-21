@@ -1,14 +1,16 @@
 "use client";
 
+import { useSession } from "@auth/hooks/use-session";
 import { cn } from "@repo/ui";
 import { format } from "date-fns";
 import { Heart, MinusIcon, PlusIcon, ShoppingCart } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 type TableProduct = {
 	id: string;
 	title: string;
-	sellingPrice: number;
+	sellingPrice: number | null;
 	originalPrice?: number | null;
 	discountRate?: number | null;
 	boxSpec?: string | null;
@@ -32,8 +34,20 @@ function QuickOrderCell({
 	onAddToCart?: (productId: string, quantity: number) => void;
 	onToggleWishlist?: (productId: string) => void;
 }) {
+	const { user } = useSession();
 	const [quantity, setQuantity] = useState(1);
 	const [isFavorited, setIsFavorited] = useState(false);
+
+	if (!user) {
+		return (
+			<Link
+				href="/login"
+				className="inline-flex rounded-md border border-stone-200 px-2 py-1 text-xs font-medium text-stone-700 hover:bg-stone-50"
+			>
+				登入後下單
+			</Link>
+		);
+	}
 
 	return (
 		<div className="flex items-center gap-1">
@@ -111,7 +125,9 @@ export function TableView({ products, onAddToCart, onToggleWishlist }: TableView
 									{product.originalPrice && (
 										<span className="text-xs text-stone-500 line-through">¥{product.originalPrice}</span>
 									)}
-									<p className="font-medium text-stone-900">¥{product.sellingPrice}</p>
+									<p className="font-medium text-stone-900">
+										{product.sellingPrice === null ? "登入查看價格" : `¥${product.sellingPrice}`}
+									</p>
 								</div>
 							</td>
 							<td className="px-3 py-2.5 text-right">

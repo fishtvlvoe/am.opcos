@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "@auth/hooks/use-session";
 import { Button, Input, toastError, toastSuccess } from "@repo/ui";
 import { MobileMenu } from "@shared/components/MobileMenu";
 import { orpc } from "@shared/lib/orpc-query-utils";
@@ -15,6 +16,7 @@ import { NewArrivalsScroll } from "./components/NewArrivalsScroll";
 import { ProductCard } from "./components/ProductCard";
 
 export function CatalogPage() {
+	const { user } = useSession();
 	const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
 	const [q, setQ] = useQueryState("q", parseAsString.withDefault(""));
 	const [category, setCategory] = useQueryState("category", parseAsString.withDefault(""));
@@ -32,9 +34,10 @@ export function CatalogPage() {
 		}),
 	);
 
-	const wishlistQuery = useQuery(
-		orpc.anismile.wishlist.list.queryOptions({ input: { sort: "recent", filter: "all" } }),
-	);
+	const wishlistQuery = useQuery({
+		...orpc.anismile.wishlist.list.queryOptions({ input: { sort: "recent", filter: "all" } }),
+		enabled: !!user,
+	});
 
 	const addWishlistMutation = useMutation(
 		orpc.anismile.wishlist.add.mutationOptions({
@@ -158,7 +161,7 @@ export function CatalogPage() {
 								key={item.id}
 								id={item.id}
 								title={item.titleTranslated || item.titleOriginal}
-								price={Number(item.sellingPrice)}
+								price={item.sellingPrice}
 								imageUrl={Array.isArray(item.imageUrls) ? String(item.imageUrls[0] ?? "") : ""}
 								orderDeadline={item.orderDeadline}
 								listingDate={item.listingDate}

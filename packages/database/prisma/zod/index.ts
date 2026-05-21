@@ -97,7 +97,7 @@ export type UserNotificationPreferenceScalarFieldEnum = z.infer<typeof UserNotif
 
 // File: AnismileProductScalarFieldEnum.schema.ts
 
-export const AnismileProductScalarFieldEnumSchema = z.enum(['id', 'supplierId', 'titleOriginal', 'titleTranslated', 'descriptionOriginal', 'descriptionTranslated', 'imageUrls', 'category', 'series', 'janCode', 'brand', 'franchise', 'discountRate', 'saleStatus', 'boxSpec', 'releaseDate', 'originalPrice', 'costPrice', 'markupOverride', 'sellingPrice', 'priceManualOverride', 'listingDate', 'orderDeadline', 'inStock', 'stockQuantity', 'lastSyncedAt', 'createdAt', 'updatedAt'])
+export const AnismileProductScalarFieldEnumSchema = z.enum(['id', 'supplierId', 'sourceUrl', 'titleOriginal', 'titleTranslated', 'descriptionOriginal', 'descriptionTranslated', 'imageUrls', 'category', 'series', 'janCode', 'brand', 'franchise', 'discountRate', 'saleStatus', 'boxSpec', 'releaseDate', 'originalPrice', 'costPrice', 'markupOverride', 'sellingPrice', 'priceManualOverride', 'listingDate', 'orderDeadline', 'inStock', 'stockQuantity', 'lastSyncedAt', 'createdAt', 'updatedAt'])
 
 export type AnismileProductScalarFieldEnum = z.infer<typeof AnismileProductScalarFieldEnumSchema>;
 
@@ -127,7 +127,7 @@ export type AnismileOrderItemScalarFieldEnum = z.infer<typeof AnismileOrderItemS
 
 // File: AnismileSyncLogScalarFieldEnum.schema.ts
 
-export const AnismileSyncLogScalarFieldEnumSchema = z.enum(['id', 'startedAt', 'finishedAt', 'status', 'productsSynced', 'productsAdded', 'productsUpdated', 'errorMessage'])
+export const AnismileSyncLogScalarFieldEnumSchema = z.enum(['id', 'startedAt', 'finishedAt', 'status', 'productsSynced', 'productsAdded', 'productsUpdated', 'productsSkipped', 'productsFailed', 'errorMessage'])
 
 export type AnismileSyncLogScalarFieldEnum = z.infer<typeof AnismileSyncLogScalarFieldEnumSchema>;
 
@@ -440,6 +440,7 @@ export type UserNotificationPreferenceType = z.infer<typeof UserNotificationPref
 export const AnismileProductSchema = z.object({
   id: z.string(),
   supplierId: z.string(),
+  sourceUrl: z.string().nullish(),
   titleOriginal: z.string(),
   titleTranslated: z.string(),
   descriptionOriginal: z.string().nullish(),
@@ -560,6 +561,8 @@ export const AnismileSyncLogSchema = z.object({
   productsSynced: z.number().int(),
   productsAdded: z.number().int(),
   productsUpdated: z.number().int(),
+  productsSkipped: z.number().int(),
+  productsFailed: z.number().int(),
   errorMessage: z.string().nullish(),
 });
 

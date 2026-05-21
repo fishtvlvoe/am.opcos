@@ -9,6 +9,7 @@ export type AnismileOrderStatus = (typeof ORDER_STATUSES)[number];
 
 export type ProductSyncInput = {
 	supplierId: string;
+	sourceUrl?: string | null;
 	titleOriginal: string;
 	titleTranslated: string;
 	descriptionOriginal?: string | null;
@@ -342,6 +343,8 @@ export async function finishSyncLog({
 	productsSynced,
 	productsAdded,
 	productsUpdated,
+	productsSkipped = 0,
+	productsFailed = 0,
 	errorMessage,
 }: {
 	id: string;
@@ -349,6 +352,8 @@ export async function finishSyncLog({
 	productsSynced: number;
 	productsAdded: number;
 	productsUpdated: number;
+	productsSkipped?: number;
+	productsFailed?: number;
 	errorMessage?: string;
 }) {
 	return await db.anismileSyncLog.update({
@@ -358,6 +363,8 @@ export async function finishSyncLog({
 			productsSynced,
 			productsAdded,
 			productsUpdated,
+			productsSkipped,
+			productsFailed,
 			errorMessage,
 			finishedAt: new Date(),
 		},
@@ -380,6 +387,7 @@ export async function upsertProductsFromSync(products: ProductSyncInput[]) {
 
 	let productsAdded = 0;
 	let productsUpdated = 0;
+	let productsSkipped = 0;
 
 	await db.$transaction(async (tx) => {
 		for (const product of products) {
@@ -412,6 +420,7 @@ export async function upsertProductsFromSync(products: ProductSyncInput[]) {
 				},
 				create: {
 					supplierId: product.supplierId,
+					sourceUrl: product.sourceUrl ?? null,
 					titleOriginal: product.titleOriginal,
 					titleTranslated: product.titleTranslated,
 					descriptionOriginal: product.descriptionOriginal,
@@ -439,6 +448,7 @@ export async function upsertProductsFromSync(products: ProductSyncInput[]) {
 				},
 				update: {
 					titleOriginal: product.titleOriginal,
+					sourceUrl: product.sourceUrl ?? null,
 					titleTranslated: product.titleTranslated,
 					descriptionOriginal: product.descriptionOriginal,
 					descriptionTranslated: product.descriptionTranslated,
@@ -471,7 +481,7 @@ export async function upsertProductsFromSync(products: ProductSyncInput[]) {
 			}
 		}
 
-		await tx.anismileProduct.updateMany({
+		const skippedResult = await tx.anismileProduct.updateMany({
 			where: {
 				supplierId: {
 					notIn: supplierIds.length > 0 ? supplierIds : ["__none__"],
@@ -481,12 +491,14 @@ export async function upsertProductsFromSync(products: ProductSyncInput[]) {
 				inStock: false,
 			},
 		});
+		productsSkipped = skippedResult.count;
 	});
 
 	return {
 		productsSynced: products.length,
 		productsAdded,
 		productsUpdated,
+		productsSkipped,
 	};
 }
 
