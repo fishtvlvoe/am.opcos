@@ -14,8 +14,7 @@ describe("SearchPage all-products mode", () => {
 
 		expect(source).toContain("orpc.anismile.products.list.queryOptions");
 		expect(source).toContain("const isAllProductsMode = trimmed.length === 0");
-		expect(source).toContain("inStock: false");
-		expect(source).toContain("showUnavailable: true");
+		expect(source).not.toContain("showUnavailable: true");
 		expect(source).toContain("所有產品");
 		expect(source).toContain("瀏覽目前同步的日本供應商商品");
 		expect(source).not.toContain("請輸入搜尋關鍵字");

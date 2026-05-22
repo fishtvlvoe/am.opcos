@@ -40,6 +40,7 @@ describe("Cart page UI contract", () => {
 	it("cart API refreshes stale source products before showing or checking out", () => {
 		const apiSource = read("packages/api/modules/anismile/procedures/cart.ts");
 		expect(apiSource).toContain("refreshUserCartProducts(user.id)");
+		expect(apiSource).toContain("pruneUnavailableCartItems(user.id)");
 		expect(apiSource).toContain("crawlAnismileProductBySupplierId");
 		expect(apiSource).toContain("getCartProductUnavailableReason");
 	});

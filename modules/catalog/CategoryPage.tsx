@@ -45,22 +45,19 @@ export function CategoryPage({ slug }: { slug: string }) {
 	const [view, setView] = useQueryState("view", parseAsString.withDefault("grid"));
 	const [inStock, setInStock] = useQueryState("inStock", parseAsBoolean.withDefault(false));
 	const [urgent, setUrgent] = useQueryState("urgent", parseAsBoolean.withDefault(false));
-	const [showAll, setShowAll] = useQueryState("showAll", parseAsBoolean.withDefault(false));
 
 	const filters = useMemo(() => {
-		const next: { franchise?: string; brand?: string; inStock?: boolean; urgentDeadline?: boolean; showUnavailable?: boolean } = {};
+		const next: { franchise?: string; brand?: string; inStock?: boolean; urgentDeadline?: boolean } = {};
 		if (franchise) next.franchise = franchise;
 		if (brand) next.brand = brand;
 		if (inStock) next.inStock = true;
 		if (urgent) next.urgentDeadline = true;
-		if (showAll) next.showUnavailable = true;
 		return Object.keys(next).length ? next : undefined;
-	}, [brand, franchise, inStock, urgent, showAll]);
+	}, [brand, franchise, inStock, urgent]);
 
 	const quickFilters: QuickFilter[] = [
 		{ key: "inStock", label: "只看現貨", checked: inStock },
 		{ key: "urgent", label: "即將截單", checked: urgent },
-		{ key: "showAll", label: "顯示已截止", checked: showAll },
 	];
 
 	const productsQuery = useQuery(
@@ -164,7 +161,6 @@ export function CategoryPage({ slug }: { slug: string }) {
 							onQuickFilterChange={(key, checked) => {
 								if (key === "inStock") void setInStock(checked);
 								if (key === "urgent") void setUrgent(checked);
-								if (key === "showAll") void setShowAll(checked);
 								void setPage(1);
 							}}
 						/>

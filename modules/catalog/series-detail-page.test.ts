@@ -36,12 +36,13 @@ describe("SeriesDetailPage 系列詳情頁結構契約", () => {
 		expect(source).toContain("orpc");
 	});
 
-	it("系列頁預設包含已同步商品，避免已截止資料被濾成空白", () => {
+	it("系列頁公開頁不顯示已截止或下架商品", () => {
 		const source = read(
 			"modules/catalog/SeriesDetailPage.tsx",
 		);
-		expect(source).toContain("useState(true)");
-		expect(source).toContain("showUnavailable,");
+		expect(source).not.toContain("顯示已截止");
+		expect(source).not.toContain("showUnavailable");
+		expect(source).toContain("inStock: inStockFilter || undefined");
 	});
 
 	it("後端系列查詢支援截單繁簡與作品名前段 fallback", () => {

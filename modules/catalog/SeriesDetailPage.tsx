@@ -43,7 +43,6 @@ export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
 	const [showFilter, setShowFilter] = useState(false);
 	const [inStockFilter, setInStockFilter] = useState(false);
 	const [urgentFilter, setUrgentFilter] = useState(false);
-	const [showUnavailable, setShowUnavailable] = useState(true);
 
 	const queryClient = useQueryClient();
 
@@ -88,9 +87,8 @@ export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
 				series: seriesId,
 				page,
 				pageSize,
-				inStock: inStockFilter ? true : false,
+				inStock: inStockFilter || undefined,
 				urgentDeadline: urgentFilter || undefined,
-				showUnavailable,
 			},
 		}),
 	);
@@ -114,13 +112,11 @@ export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
 	const quickFilters: QuickFilter[] = [
 		{ key: "inStock", label: "只看現貨", checked: inStockFilter },
 		{ key: "urgent", label: "即將截單", checked: urgentFilter },
-		{ key: "showAll", label: "顯示已截止", checked: showUnavailable },
 	];
 
 	const handleQuickFilterChange = (key: string, checked: boolean) => {
 		if (key === "inStock") setInStockFilter(checked);
 		if (key === "urgent") setUrgentFilter(checked);
-		if (key === "showAll") setShowUnavailable(checked);
 		setPage(1);
 	};
 

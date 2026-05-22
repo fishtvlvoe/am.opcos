@@ -6,6 +6,10 @@ const querySource = readFileSync(
 	resolve(__dirname, "../../../../database/prisma/queries/anismile.ts"),
 	"utf8",
 );
+const productProcedureSource = readFileSync(
+	resolve(__dirname, "products.ts"),
+	"utf8",
+);
 
 describe("upsertProductsFromSync sync protection contract", () => {
 	it("selects priceManualOverride in existing product lookup", () => {
@@ -25,5 +29,13 @@ describe("upsertProductsFromSync sync protection contract", () => {
 	it("allows sync to correct stale listingDate and source availability", () => {
 		expect(querySource).toContain("listingDate: product.listingDate ?? existing?.listingDate ?? now");
 		expect(querySource).toContain("product.inStock ??");
+	});
+
+	it("keeps expired and unavailable products out of public storefront APIs", () => {
+		expect(productProcedureSource).toContain("onlyInStock: true");
+		expect(productProcedureSource).toContain("showUnavailable: false");
+		expect(productProcedureSource).toContain("isPubliclyOrderableProduct");
+		expect(querySource).toContain("inStock: true");
+		expect(querySource).toContain("orderDeadline: { gte: today }");
 	});
 });

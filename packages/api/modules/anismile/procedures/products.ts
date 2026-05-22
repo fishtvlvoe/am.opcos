@@ -73,6 +73,14 @@ function shouldRefreshSourceProduct(product: {
 	return false;
 }
 
+function isPubliclyOrderableProduct(product: {
+	inStock: boolean;
+	orderDeadline: Date | null;
+}) {
+	if (!product.inStock) return false;
+	return !product.orderDeadline || product.orderDeadline.getTime() >= Date.now();
+}
+
 async function refreshSourceProductIfNeeded(product: {
 	supplierId: string;
 	imageUrls: unknown;
@@ -199,9 +207,9 @@ export const listProducts = publicProcedure
 			series: input.series,
 			search: input.search,
 			listingDate,
-			onlyInStock: input.inStock ?? true,
+			onlyInStock: true,
 			urgentDeadline: input.urgentDeadline,
-			showUnavailable: input.showUnavailable,
+			showUnavailable: false,
 		});
 		if (input.series && result.total === 0) {
 			const crawledProducts = await crawlAnismileProductsBySeriesName(input.series);
@@ -238,9 +246,9 @@ export const listProducts = publicProcedure
 					series: input.series,
 					search: input.search,
 					listingDate,
-					onlyInStock: input.inStock ?? true,
+					onlyInStock: true,
 					urgentDeadline: input.urgentDeadline,
-					showUnavailable: input.showUnavailable,
+					showUnavailable: false,
 				});
 			}
 		}
@@ -347,6 +355,9 @@ export const getProductById = publicProcedure
 		await refreshSourceProductIfNeeded(product);
 		product = await getAnismileProductById(id);
 		if (!product) {
+			throw new ORPCError("NOT_FOUND", { message: "Product not found" });
+		}
+		if (!isPubliclyOrderableProduct(product)) {
 			throw new ORPCError("NOT_FOUND", { message: "Product not found" });
 		}
 		const seriesImageMap = await getSeriesImageMapForProducts([product]);

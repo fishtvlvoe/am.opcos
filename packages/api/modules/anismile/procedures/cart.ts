@@ -109,6 +109,22 @@ async function refreshUserCartProducts(userId: string) {
 	);
 }
 
+async function pruneUnavailableCartItems(userId: string) {
+	await db.anismileCartItem.deleteMany({
+		where: {
+			userId,
+			product: {
+				is: {
+					OR: [
+						{ inStock: false },
+						{ orderDeadline: { lt: new Date() } },
+					],
+				},
+			},
+		},
+	});
+}
+
 export const addCartItem = protectedProcedure
 	.route({
 		method: "POST",
@@ -147,6 +163,7 @@ export const getCartItems = protectedProcedure
 	.handler(async ({ context: { user } }) => {
 		const tierSettings = await getTierSettingsValues();
 		await refreshUserCartProducts(user.id);
+		await pruneUnavailableCartItems(user.id);
 
 		// 取得用戶等級折扣
 		const userRecord = await db.user.findUnique({
@@ -274,6 +291,7 @@ export const checkoutCart = protectedProcedure
 		try {
 			const tierSettings = await getTierSettingsValues();
 			await refreshUserCartProducts(user.id);
+			await pruneUnavailableCartItems(user.id);
 
 			// 取得用戶等級折扣
 			const userRecord = await db.user.findUnique({

@@ -1120,19 +1120,27 @@ export async function searchAnismileProducts({
 	perPage?: number;
 }) {
 	const isJanCode = /^\d{8,14}$/.test(query.trim());
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
 
 	const baseWhere: Prisma.AnismileProductWhereInput = {
+		inStock: true,
+		OR: [{ orderDeadline: null }, { orderDeadline: { gte: today } }],
 		...(filters?.category ? { category: filters.category } : {}),
 		...(filters?.franchise ? { franchise: filters.franchise } : {}),
 		...(filters?.brand ? { brand: filters.brand } : {}),
 		...(isJanCode
-			? { janCode: { contains: query.trim(), mode: "insensitive" as const } }
+			? { AND: [{ janCode: { contains: query.trim(), mode: "insensitive" as const } }] }
 			: {
-					OR: [
-						{ titleOriginal: { contains: query, mode: "insensitive" as const } },
-						{ titleTranslated: { contains: query, mode: "insensitive" as const } },
-						{ franchise: { contains: query, mode: "insensitive" as const } },
-						{ brand: { contains: query, mode: "insensitive" as const } },
+					AND: [
+						{
+							OR: [
+								{ titleOriginal: { contains: query, mode: "insensitive" as const } },
+								{ titleTranslated: { contains: query, mode: "insensitive" as const } },
+								{ franchise: { contains: query, mode: "insensitive" as const } },
+								{ brand: { contains: query, mode: "insensitive" as const } },
+							],
+						},
 					],
 				}),
 	};
@@ -1221,9 +1229,9 @@ export async function listProductsByCategory({
 
 	const baseWhere: Prisma.AnismileProductWhereInput = {
 		AND: andConditions,
+		inStock: true,
 		...(filters?.franchise ? { franchise: filters.franchise } : {}),
 		...(filters?.brand ? { brand: filters.brand } : {}),
-		...(filters?.inStock ? { inStock: true } : {}),
 		...(filters?.urgentDeadline ? { orderDeadline: { gte: today, lte: urgentEnd } } : {}),
 	};
 
