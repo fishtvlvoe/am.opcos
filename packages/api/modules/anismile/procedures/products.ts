@@ -9,10 +9,12 @@ import {
 	searchAnismileProducts,
 	setProductMarkupOverride,
 	updateProductFields,
+	upsertProductsFromSync,
 } from "@repo/database";
 import { z } from "zod";
 
 import { anismileAdminProcedure, protectedProcedure, publicProcedure } from "../../../orpc/procedures";
+import { crawlAnismileProductsBySeriesName } from "../lib/crawler";
 import { toNumber, toNumberRequired } from "../lib/serialize";
 
 async function canSeePricing(headers: Headers) {
@@ -112,7 +114,7 @@ export const listProducts = publicProcedure
 	.handler(async ({ input, context }) => {
 		const showPrices = await canSeePricing(context.headers);
 		const listingDate = input.listingDate ? new Date(input.listingDate) : undefined;
-		const result = await listAnismileProducts({
+		let result = await listAnismileProducts({
 			page: input.page,
 			pageSize: input.pageSize,
 			category: input.category,
@@ -123,6 +125,46 @@ export const listProducts = publicProcedure
 			urgentDeadline: input.urgentDeadline,
 			showUnavailable: input.showUnavailable,
 		});
+		if (input.series && result.total === 0) {
+			const crawledProducts = await crawlAnismileProductsBySeriesName(input.series);
+			if (crawledProducts.length > 0) {
+				await upsertProductsFromSync(
+					crawledProducts.map((item) => ({
+						supplierId: item.supplierId,
+						sourceUrl: item.sourceUrl,
+						titleOriginal: item.titleOriginal,
+						titleTranslated: item.titleTranslated,
+						descriptionOriginal: item.descriptionOriginal,
+						descriptionTranslated: item.descriptionTranslated,
+						imageUrls: item.imageUrls,
+						category: item.category,
+						series: item.series,
+						originalPrice: item.originalPrice,
+						costPrice: item.costPrice,
+						listingDate: item.listingDate,
+						orderDeadline: item.orderDeadline,
+						stockQuantity: item.stockQuantity,
+						lastSyncedAt: new Date(),
+						discountRate: item.discountRate,
+						brand: item.brand,
+						franchise: item.franchise,
+						janCode: item.janCode,
+						releaseDate: item.releaseDate,
+					})),
+				);
+				result = await listAnismileProducts({
+					page: input.page,
+					pageSize: input.pageSize,
+					category: input.category,
+					series: input.series,
+					search: input.search,
+					listingDate,
+					onlyInStock: input.inStock ?? true,
+					urgentDeadline: input.urgentDeadline,
+					showUnavailable: input.showUnavailable,
+				});
+			}
+		}
 		const seriesImageMap = await getSourceSeriesImageMap();
 
 		return {

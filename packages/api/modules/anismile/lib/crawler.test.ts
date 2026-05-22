@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseProductApiForTest, parseProductEntriesFromSeriesPageForTest } from "./crawler";
+import { crawlAnismileProductsBySeriesName, parseProductApiForTest, parseProductEntriesFromSeriesPageForTest } from "./crawler";
 
 const BASE_ITEM = {
 	hash: "test001",
@@ -76,5 +76,9 @@ describe("series page product discovery", () => {
 			{ id: "456", listingDate },
 			{ id: "123", listingDate },
 		]);
+	});
+
+	it("exports on-demand series crawler for source series fallback", () => {
+		expect(typeof crawlAnismileProductsBySeriesName).toBe("function");
 	});
 });

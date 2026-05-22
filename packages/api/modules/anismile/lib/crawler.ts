@@ -180,10 +180,15 @@ function parseProductEntriesFromSeriesPage(html: string, listingDate: Date | nul
 }
 
 async function getHomepageProductEntries(): Promise<ProductEntry[]> {
-	const payload = await fetchJson<SourceSeriesListResponse>(`${SERIES_LIST_URL}?lang=en`);
-	if (payload.code !== 1 || !payload.items?.length) return [];
+	const payloads = await Promise.all(
+		Array.from({ length: 7 }, (_, dateIndex) => fetchJson<SourceSeriesListResponse>(`${SERIES_LIST_URL}?lang=en&dateIndex=${dateIndex}`)),
+	);
+	const topSeries = payloads
+		.filter((payload) => payload.code === 1 && payload.items?.length)
+		.flatMap((payload) => payload.items ?? [])
+		.slice(0, 60);
+	if (!topSeries.length) return [];
 
-	const topSeries = payload.items.slice(0, 8);
 	const pages = await Promise.all(
 		topSeries.map(async (series) => {
 			const listingDate = parseSourceTimestamp(series.latest_add_time);
@@ -199,7 +204,44 @@ async function getHomepageProductEntries(): Promise<ProductEntry[]> {
 			if (seen.has(entry.id)) return false;
 			seen.add(entry.id);
 			return true;
+	});
+}
+
+function normalizeSeriesLookup(value: string) {
+	return value.replaceAll("截單", "截单").replaceAll("！", "!").trim();
+}
+
+export async function crawlAnismileProductsBySeriesName(seriesName: string, limit = 60): Promise<CrawledAnismileProduct[]> {
+	const sourceSeriesName = normalizeSeriesLookup(seriesName);
+	const payloads = await Promise.all(
+		Array.from({ length: 7 }, (_, dateIndex) => fetchJson<SourceSeriesListResponse>(`${SERIES_LIST_URL}?lang=en&dateIndex=${dateIndex}`)),
+	);
+	const series = payloads
+		.flatMap((payload) => (payload.code === 1 ? (payload.items ?? []) : []))
+		.find((item) => normalizeSeriesLookup(item.name) === sourceSeriesName);
+
+	if (!series) return [];
+
+	const listingDate = parseSourceTimestamp(series.latest_add_time);
+	const url = `${SERIES_PAGE_BASE_URL}/${series.id}/${encodeURIComponent(series.name)}/`;
+	const html = await fetchText(url);
+	const productEntries = parseProductEntriesFromSeriesPage(html, listingDate).slice(0, limit);
+	const products: CrawledAnismileProduct[] = [];
+
+	for (const { id, listingDate } of productEntries) {
+		const res = await fetchJson<AnismileProductResponse>(PRODUCT_API_URL, {
+			method: "POST",
+			headers: { "content-type": "application/x-www-form-urlencoded" },
+			body: new URLSearchParams({ item: id, lang: "cn" }),
 		});
+		const parsed = parseProductApi(res, id);
+		if (parsed) {
+			parsed.listingDate = listingDate;
+			products.push(parsed);
+		}
+	}
+
+	return products;
 }
 
 type AnismileProductResponse = {
