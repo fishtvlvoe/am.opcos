@@ -44,6 +44,15 @@ describe("SeriesDetailPage 系列詳情頁結構契約", () => {
 		expect(source).toContain("showUnavailable,");
 	});
 
+	it("後端系列查詢支援截單繁簡與作品名前段 fallback", () => {
+		const source = read(
+			"packages/database/prisma/queries/anismile.ts",
+		);
+		expect(source).toContain('series.split("・")[0]');
+		expect(source).toContain('replaceAll("截單", "截单")');
+		expect(source).toContain('replaceAll("！", "!")');
+	});
+
 	it("包含 CSV 下載（Blob 建構）", () => {
 		const source = read(
 			"modules/catalog/SeriesDetailPage.tsx",

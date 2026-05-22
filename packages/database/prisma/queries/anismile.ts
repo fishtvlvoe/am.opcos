@@ -173,7 +173,17 @@ export async function listAnismileProducts({
 		andConditions.push({ OR: [{ orderDeadline: null }, { orderDeadline: { gte: today } }] });
 	}
 	if (series) {
-		const seriesTerms = Array.from(new Set([series, series.replaceAll("截單", "截单"), series.replaceAll("截单", "截單")]));
+		const seriesRoot = series.split("・")[0] ?? series;
+		const seriesTerms = Array.from(
+			new Set([
+				series,
+				series.replaceAll("截單", "截单"),
+				series.replaceAll("截单", "截單"),
+				series.replaceAll("！", "!"),
+				seriesRoot,
+				seriesRoot.replaceAll("！", "!"),
+			].filter(Boolean)),
+		);
 		andConditions.push({
 			OR: seriesTerms.map((term) => ({ series: { startsWith: term } })),
 		});
