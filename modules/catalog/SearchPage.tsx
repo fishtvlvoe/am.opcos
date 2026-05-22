@@ -115,7 +115,7 @@ export function SearchPage() {
 						<h1 className="font-semibold text-xl">{isAllProductsMode ? "所有產品" : "搜尋"}</h1>
 						{isAllProductsMode ? (
 							<p className="mt-1 text-sm text-muted-foreground">
-								瀏覽目前同步的 anismile.jp 商品，可用分類篩選縮小範圍。
+								瀏覽目前同步的日本供應商商品，可用分類篩選縮小範圍。
 							</p>
 						) : null}
 					</div>
@@ -143,6 +143,10 @@ export function SearchPage() {
 
 				{activeQuery.isPending ? (
 					<div className="py-24 text-center text-sm text-muted-foreground">載入中...</div>
+				) : activeQuery.isError ? (
+					<div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-6 text-sm text-amber-900">
+						商品資料暫時無法載入。請稍後再試，或由管理員確認 production 同步與資料庫狀態。
+					</div>
 				) : items.length === 0 ? (
 					<div className="py-24 text-center text-sm text-muted-foreground">
 						{isAllProductsMode ? "目前沒有可顯示的商品" : "找不到符合的商品，試試其他關鍵字"}

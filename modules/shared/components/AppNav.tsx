@@ -137,7 +137,7 @@ export function AppNav() {
 				<div className="flex shrink-0 items-center gap-3">
 					<Link href="/" className="inline-flex items-center gap-2">
 						<Logo withLabel={false} className="text-sm" />
-						<span className="font-semibold text-sm">Anismile</span>
+						<span className="font-semibold text-sm">AM</span>
 					</Link>
 					<Link
 						href="/"

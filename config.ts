@@ -1,7 +1,7 @@
 import type { AnismileConfig } from "./types";
 
 export const config = {
-	appName: "Anismile 採購平台",
+	appName: "AM 採購平台",
 	defaultTheme: "light",
 	enabledThemes: ["light"],
 	redirectAfterSignIn: "/",

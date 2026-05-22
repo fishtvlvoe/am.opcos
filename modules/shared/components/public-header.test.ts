@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -9,15 +9,13 @@ function read(relativePath: string) {
 describe("PublicHeader", () => {
 	const filePath = "modules/shared/components/PublicHeader.tsx";
 
-	it("使用 anismile.jp wordmark 取代自製 logo SVG 作為主要品牌圖", () => {
+	it("使用 AM 作為主要品牌，不使用上游 wordmark", () => {
 		const source = read(filePath);
-		expect(source).toContain('src="/logo-wordmark.png"');
-		expect(source).toContain('alt="AniSmile"');
-		expect(source).toContain("width={180}");
-		expect(source).toContain("height={42}");
+		expect(source).toContain("AM");
+		expect(source).not.toContain('src="/logo-wordmark.png"');
+		expect(source).not.toContain('alt="AniSmile"');
 		expect(source).not.toContain('src="/logo.svg"');
 		expect(source).not.toContain(">AniSmile<");
-		expect(source).not.toContain("bg-stone-900 text-sm font-semibold text-white");
 	});
 
 	it("導覽列搜尋欄對所有使用者可見並送往 search route", () => {
@@ -52,14 +50,5 @@ describe("PublicHeader", () => {
 		expect(source).not.toContain("const isAdmin");
 		expect(source).not.toContain("管理後台");
 		expect(source).not.toContain('href="/admin"');
-	});
-});
-
-describe("AniSmile wordmark asset", () => {
-	it("存在 logo-wordmark.png", () => {
-		const logoPath = resolve(process.cwd(), "public/logo-wordmark.png");
-		expect(existsSync(logoPath)).toBe(true);
-		const source = readFileSync(logoPath);
-		expect(source.byteLength).toBeGreaterThan(1000);
 	});
 });

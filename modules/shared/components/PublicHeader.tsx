@@ -15,7 +15,6 @@ import {
 	SearchIcon,
 	ShoppingCartIcon,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -75,14 +74,9 @@ export function PublicHeader() {
 		<header className="sticky top-0 z-40 border-b border-stone-200 bg-white/95 backdrop-blur">
 			<div className="container flex h-14 items-center justify-between gap-3">
 				<Link href="/" className="flex shrink-0 items-center">
-					<Image
-						src="/logo-wordmark.png"
-						alt="AniSmile"
-						width={180}
-						height={42}
-						className="h-auto w-[120px] sm:w-[150px] md:w-[180px]"
-						priority
-					/>
+					<span className="inline-flex h-9 items-center rounded-md bg-stone-900 px-3 font-semibold text-lg text-white tracking-wide">
+						AM
+					</span>
 				</Link>
 
 				<SearchBox className="mx-4 hidden max-w-[652px] flex-1 md:block" />

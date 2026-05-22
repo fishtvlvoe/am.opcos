@@ -15,8 +15,15 @@ describe("SearchPage all-products mode", () => {
 		expect(source).toContain("orpc.anismile.products.list.queryOptions");
 		expect(source).toContain("const isAllProductsMode = trimmed.length === 0");
 		expect(source).toContain("所有產品");
-		expect(source).toContain("瀏覽目前同步的 anismile.jp 商品");
+		expect(source).toContain("瀏覽目前同步的日本供應商商品");
 		expect(source).not.toContain("請輸入搜尋關鍵字");
+	});
+
+	it("商品 API 失敗時顯示 production 同步/資料庫狀態提示", () => {
+		const source = read(filePath);
+
+		expect(source).toContain("activeQuery.isError");
+		expect(source).toContain("production 同步與資料庫狀態");
 	});
 
 	it("有關鍵字時保留搜尋 endpoint 與搜尋標題", () => {
