@@ -12,6 +12,7 @@ type CartItemProps = {
 	imageUrl?: string;
 	quantity: number;
 	lineTotal: number;
+	unavailableReason?: string | null;
 	onIncrement: (itemId: string, nextQuantity: number) => void;
 	onDecrement: (itemId: string, nextQuantity: number) => void;
 	onRemove: (itemId: string) => void;
@@ -26,6 +27,7 @@ export function CartItem({
 	imageUrl,
 	quantity,
 	lineTotal,
+	unavailableReason,
 	onIncrement,
 	onDecrement,
 	onRemove,
@@ -44,13 +46,18 @@ export function CartItem({
 						{category ? <span>{category}</span> : null}
 						{series ? <span>{series}</span> : null}
 					</div>
+					{unavailableReason ? (
+						<p className="rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700">
+							{unavailableReason}
+						</p>
+					) : null}
 					<div className="flex items-center justify-between">
 						<div className="inline-flex items-center rounded-lg border border-stone-300">
 							<Button
 								type="button"
 								variant="ghost"
 								size="icon"
-								disabled={disabled || quantity <= 1}
+								disabled={disabled || Boolean(unavailableReason) || quantity <= 1}
 								onClick={() => onDecrement(id, quantity - 1)}
 								aria-label="減少數量"
 							>
@@ -61,7 +68,7 @@ export function CartItem({
 								type="button"
 								variant="ghost"
 								size="icon"
-								disabled={disabled}
+								disabled={disabled || Boolean(unavailableReason)}
 								onClick={() => onIncrement(id, quantity + 1)}
 								aria-label="增加數量"
 							>

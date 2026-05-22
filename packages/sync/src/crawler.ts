@@ -66,6 +66,7 @@ export async function runSync(): Promise<SyncResult> {
 				costPrice: item.costPrice,
 				listingDate: item.listingDate,
 				orderDeadline: item.orderDeadline,
+				inStock: item.inStock,
 				stockQuantity: item.stockQuantity,
 				lastSyncedAt: new Date(),
 				discountRate: item.discountRate,

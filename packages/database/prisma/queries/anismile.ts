@@ -23,6 +23,7 @@ export type ProductSyncInput = {
 	markupOverride?: number | null;
 	listingDate?: Date | null;
 	orderDeadline?: Date | null;
+	inStock?: boolean | null;
 	stockQuantity?: number | null;
 	lastSyncedAt: Date;
 	discountRate?: number | null;
@@ -462,6 +463,9 @@ export async function upsertProductsFromSync(
 				costPrice,
 				markup: effectiveMarkup,
 			});
+			const inStock =
+				product.inStock ??
+				(product.stockQuantity != null ? product.stockQuantity > 0 : true);
 
 			await tx.anismileProduct.upsert({
 				where: {
@@ -486,7 +490,7 @@ export async function upsertProductsFromSync(
 					sellingPrice,
 					listingDate: product.listingDate ?? now,
 					orderDeadline: product.orderDeadline,
-					inStock: product.stockQuantity != null ? product.stockQuantity > 0 : true,
+					inStock,
 					stockQuantity: product.stockQuantity ?? null,
 					lastSyncedAt: product.lastSyncedAt,
 					discountRate: product.discountRate != null ? new Prisma.Decimal(product.discountRate / 100) : null,
@@ -510,9 +514,9 @@ export async function upsertProductsFromSync(
 							: new Prisma.Decimal(product.originalPrice),
 					costPrice,
 					...(existing?.priceManualOverride ? {} : { markupOverride, sellingPrice }),
-					listingDate: existing?.listingDate ?? product.listingDate ?? now,
+					listingDate: product.listingDate ?? existing?.listingDate ?? now,
 					orderDeadline: product.orderDeadline,
-					inStock: product.stockQuantity != null ? product.stockQuantity > 0 : true,
+					inStock,
 					stockQuantity: product.stockQuantity ?? null,
 					lastSyncedAt: product.lastSyncedAt,
 					discountRate: product.discountRate != null ? new Prisma.Decimal(product.discountRate / 100) : null,
@@ -601,6 +605,17 @@ export async function addToCart({
 	});
 }
 
+function getProductUnavailableReason(product: {
+	inStock: boolean;
+	orderDeadline: Date | null;
+}) {
+	if (!product.inStock) return "Product unavailable";
+	if (product.orderDeadline && product.orderDeadline.getTime() < Date.now()) {
+		return "Product order deadline has passed";
+	}
+	return null;
+}
+
 export async function listCartItems(userId: string) {
 	const items = await db.anismileCartItem.findMany({
 		where: { userId },
@@ -621,6 +636,7 @@ export async function listCartItems(userId: string) {
 		items: items.map((item) => ({
 			...item,
 			lineTotal: item.product.sellingPrice.mul(item.quantity),
+			unavailableReason: getProductUnavailableReason(item.product),
 		})),
 		cartTotal,
 	};
@@ -663,10 +679,15 @@ export async function updateCartItemQuantity({
 }) {
 	const item = await db.anismileCartItem.findUnique({
 		where: { id: itemId },
+		include: { product: true },
 	});
 
 	if (!item || item.userId !== userId) {
 		throw new Error("Cannot update this cart item");
+	}
+	const unavailableReason = getProductUnavailableReason(item.product);
+	if (unavailableReason) {
+		throw new Error(unavailableReason);
 	}
 
 	await db.anismileCartItem.update({
@@ -716,6 +737,10 @@ export async function createOrderFromCart({
 
 		if (cartItems.length === 0) {
 			throw new Error("Cart is empty");
+		}
+		const unavailableItem = cartItems.find((item) => getProductUnavailableReason(item.product));
+		if (unavailableItem) {
+			throw new Error(getProductUnavailableReason(unavailableItem.product) ?? "Product unavailable");
 		}
 
 		const totalAmount = cartItems.reduce(

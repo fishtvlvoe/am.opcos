@@ -14,6 +14,10 @@ const BASE_ITEM = {
 	manufacturer: { name: "" },
 	bundles: null,
 	percent: null,
+	add_time: "2026-05-20 12:34",
+	status: 1,
+	is_stocked: 0,
+	stocked_number: 0,
 };
 
 describe("parseProductApi — new field extraction", () => {
@@ -60,6 +64,24 @@ describe("parseProductApi — new field extraction", () => {
 		};
 		const result = parseProductApiForTest(res);
 		expect(result?.janCode).toBe("4573684703414");
+	});
+
+	it("uses item add_time as the product listing date", () => {
+		const res = {
+			code: 1,
+			item: { ...BASE_ITEM, add_time: "2025-12-23 12:37" },
+		};
+		const result = parseProductApiForTest(res);
+		expect(result?.listingDate?.toISOString()).toBe("2025-12-23T00:00:00.000Z");
+	});
+
+	it("marks source status 2 products unavailable", () => {
+		const res = {
+			code: 1,
+			item: { ...BASE_ITEM, status: 2 },
+		};
+		const result = parseProductApiForTest(res);
+		expect(result?.inStock).toBe(false);
 	});
 });
 

@@ -26,4 +26,21 @@ describe("Cart page UI contract", () => {
 		expect(summarySource).toContain("運費另計");
 		expect(summarySource).toContain("disabled={disabled}");
 	});
+
+	it("blocks checkout when synced product state makes cart items unavailable", () => {
+		const pageSource = read("modules/cart/CartPage.tsx");
+		const itemSource = read("modules/cart/components/CartItem.tsx");
+		const summarySource = read("modules/cart/components/OrderSummary.tsx");
+		expect(pageSource).toContain("hasUnavailableItems");
+		expect(pageSource).toContain("unavailableReason={item.unavailableReason}");
+		expect(itemSource).toContain("unavailableReason");
+		expect(summarySource).toContain("disabledReason");
+	});
+
+	it("cart API refreshes stale source products before showing or checking out", () => {
+		const apiSource = read("packages/api/modules/anismile/procedures/cart.ts");
+		expect(apiSource).toContain("refreshUserCartProducts(user.id)");
+		expect(apiSource).toContain("crawlAnismileProductBySupplierId");
+		expect(apiSource).toContain("getCartProductUnavailableReason");
+	});
 });

@@ -7,9 +7,10 @@ type OrderSummaryProps = {
 	subtotal: number;
 	onSubmit: () => void;
 	disabled: boolean;
+	disabledReason?: string | null;
 };
 
-export function OrderSummary({ itemCount, subtotal, onSubmit, disabled }: OrderSummaryProps) {
+export function OrderSummary({ itemCount, subtotal, onSubmit, disabled, disabledReason }: OrderSummaryProps) {
 	return (
 		<section className="h-fit space-y-4 rounded-xl border border-stone-200 bg-white p-4">
 			<h2 className="font-semibold text-lg text-stone-900">訂單摘要</h2>
@@ -35,6 +36,7 @@ export function OrderSummary({ itemCount, subtotal, onSubmit, disabled }: OrderS
 			<Button className="w-full" disabled={disabled} onClick={onSubmit}>
 				前往結帳
 			</Button>
+			{disabledReason ? <p className="text-xs text-red-600">{disabledReason}</p> : null}
 		</section>
 	);
 }

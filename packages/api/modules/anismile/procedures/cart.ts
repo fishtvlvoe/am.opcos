@@ -6,13 +6,108 @@ import {
 	listCartItems,
 	removeCartItem,
 	updateCartItemQuantity as updateCartItemQuantityQuery,
+	upsertProductsFromSync,
 } from "@repo/database";
 import { sendEmail } from "@repo/mail";
 import { z } from "zod";
 
 import { protectedProcedure } from "../../../orpc/procedures";
+import type { CrawledAnismileProduct } from "../lib/crawler";
+import { crawlAnismileProductBySupplierId } from "../lib/crawler";
 import { notifyAdminNewOrder } from "../lib/line-notify";
 import { toNumberRequired } from "../lib/serialize";
+
+const PLACEHOLDER_IMAGE_MARKER = "length_shadow_white";
+const SOURCE_PRODUCT_REFRESH_TTL_MS = 30 * 60 * 1000;
+
+function getCartProductUnavailableReason(product: {
+	inStock: boolean;
+	orderDeadline: Date | null;
+}) {
+	if (!product.inStock) return "商品已下架或無法下單";
+	if (product.orderDeadline && product.orderDeadline.getTime() < Date.now()) {
+		return "商品已超過截單日";
+	}
+	return null;
+}
+
+function toImageUrlArray(value: unknown): string[] {
+	return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : [];
+}
+
+function shouldRefreshCartProduct(product: {
+	imageUrls: unknown;
+	listingDate: Date | null;
+	orderDeadline: Date | null;
+	lastSyncedAt: Date;
+}) {
+	if (Date.now() - product.lastSyncedAt.getTime() < SOURCE_PRODUCT_REFRESH_TTL_MS) return false;
+	const firstImage = toImageUrlArray(product.imageUrls)[0];
+	if (!firstImage || firstImage.includes(PLACEHOLDER_IMAGE_MARKER)) return true;
+	if (product.listingDate && product.orderDeadline && product.listingDate.getTime() > product.orderDeadline.getTime()) {
+		return true;
+	}
+	return false;
+}
+
+async function refreshUserCartProducts(userId: string) {
+	const items = await db.anismileCartItem.findMany({
+		where: { userId },
+		select: {
+			product: {
+				select: {
+					supplierId: true,
+					imageUrls: true,
+					listingDate: true,
+					orderDeadline: true,
+					lastSyncedAt: true,
+				},
+			},
+		},
+	});
+	const staleSupplierIds = Array.from(
+		new Set(
+			items
+				.filter((item) => shouldRefreshCartProduct(item.product))
+				.map((item) => item.product.supplierId),
+		),
+	).slice(0, 5);
+
+	if (staleSupplierIds.length === 0) return;
+
+	const refreshedProducts = (
+		await Promise.all(staleSupplierIds.map((supplierId) => crawlAnismileProductBySupplierId(supplierId).catch(() => null)))
+	).filter((item): item is CrawledAnismileProduct => Boolean(item));
+
+	if (refreshedProducts.length === 0) return;
+
+	await upsertProductsFromSync(
+		refreshedProducts.map((item) => ({
+			supplierId: item.supplierId,
+			sourceUrl: item.sourceUrl,
+			titleOriginal: item.titleOriginal,
+			titleTranslated: item.titleTranslated,
+			descriptionOriginal: item.descriptionOriginal,
+			descriptionTranslated: item.descriptionTranslated,
+			imageUrls: item.imageUrls,
+			category: item.category,
+			series: item.series,
+			originalPrice: item.originalPrice,
+			costPrice: item.costPrice,
+			listingDate: item.listingDate,
+			orderDeadline: item.orderDeadline,
+			inStock: item.inStock,
+			stockQuantity: item.stockQuantity,
+			lastSyncedAt: new Date(),
+			discountRate: item.discountRate,
+			brand: item.brand,
+			franchise: item.franchise,
+			janCode: item.janCode,
+			releaseDate: item.releaseDate,
+		})),
+		{ markMissingOutOfStock: false },
+	);
+}
 
 export const addCartItem = protectedProcedure
 	.route({
@@ -51,6 +146,7 @@ export const getCartItems = protectedProcedure
 	})
 	.handler(async ({ context: { user } }) => {
 		const tierSettings = await getTierSettingsValues();
+		await refreshUserCartProducts(user.id);
 
 		// 取得用戶等級折扣
 		const userRecord = await db.user.findUnique({
@@ -84,6 +180,13 @@ export const getCartItems = protectedProcedure
 				},
 				lineTotal,
 				tierDiscount,
+				isOrderable: item.unavailableReason === null,
+				unavailableReason:
+					item.unavailableReason === "Product order deadline has passed"
+						? "商品已超過截單日"
+						: item.unavailableReason === "Product unavailable"
+							? "商品已下架或無法下單"
+							: null,
 			};
 		});
 
@@ -170,6 +273,7 @@ export const checkoutCart = protectedProcedure
 	.handler(async ({ input, context: { user } }) => {
 		try {
 			const tierSettings = await getTierSettingsValues();
+			await refreshUserCartProducts(user.id);
 
 			// 取得用戶等級折扣
 			const userRecord = await db.user.findUnique({
@@ -193,6 +297,10 @@ export const checkoutCart = protectedProcedure
 
 				if (cartItems.length === 0) {
 					throw new Error("購物車是空的");
+				}
+				const unavailableItem = cartItems.find((item) => getCartProductUnavailableReason(item.product));
+				if (unavailableItem) {
+					throw new Error(getCartProductUnavailableReason(unavailableItem.product) ?? "購物車包含無法下單的商品");
 				}
 
 				// 計算每個品項的單價（有 markupOverride 不套用等級折扣）

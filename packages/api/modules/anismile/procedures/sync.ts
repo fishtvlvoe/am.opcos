@@ -20,9 +20,16 @@ export async function runAnismileSyncJob(syncLogId: string) {
 				series: item.series,
 				originalPrice: item.originalPrice,
 				costPrice: item.costPrice,
+				listingDate: item.listingDate,
 				orderDeadline: item.orderDeadline,
+				inStock: item.inStock,
 				stockQuantity: item.stockQuantity,
 				lastSyncedAt: new Date(),
+				discountRate: item.discountRate,
+				brand: item.brand,
+				franchise: item.franchise,
+				janCode: item.janCode,
+				releaseDate: item.releaseDate,
 			})),
 		);
 

@@ -21,4 +21,9 @@ describe("upsertProductsFromSync sync protection contract", () => {
 		// Both sellingPrice and markupOverride must be protected
 		expect(querySource).toContain("existing?.priceManualOverride");
 	});
+
+	it("allows sync to correct stale listingDate and source availability", () => {
+		expect(querySource).toContain("listingDate: product.listingDate ?? existing?.listingDate ?? now");
+		expect(querySource).toContain("product.inStock ??");
+	});
 });

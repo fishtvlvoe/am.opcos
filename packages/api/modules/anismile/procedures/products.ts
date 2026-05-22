@@ -14,7 +14,7 @@ import {
 import { z } from "zod";
 
 import { anismileAdminProcedure, protectedProcedure, publicProcedure } from "../../../orpc/procedures";
-import { crawlAnismileProductsBySeriesName } from "../lib/crawler";
+import { crawlAnismileProductBySupplierId, crawlAnismileProductsBySeriesName } from "../lib/crawler";
 import { toNumber, toNumberRequired } from "../lib/serialize";
 
 async function canSeePricing(headers: Headers) {
@@ -28,6 +28,10 @@ function publicPrice<T extends number>(value: T, visible: boolean): T | null {
 
 const ANISMILE_ORIGIN = "https://www.anismile.jp";
 const PLACEHOLDER_IMAGE_MARKER = "length_shadow_white";
+const SERIES_IMAGE_CACHE_TTL_MS = 5 * 60 * 1000;
+const SOURCE_PRODUCT_REFRESH_TTL_MS = 30 * 60 * 1000;
+
+let seriesImageCache: { expiresAt: number; map: Map<string, string> } | null = null;
 
 type SeriesImageResponse = {
 	code: number;
@@ -54,9 +58,66 @@ function isPlaceholderImageUrl(url: string | null | undefined) {
 	return !url || url.includes(PLACEHOLDER_IMAGE_MARKER);
 }
 
+function shouldRefreshSourceProduct(product: {
+	imageUrls: unknown;
+	listingDate: Date | null;
+	orderDeadline: Date | null;
+	lastSyncedAt: Date;
+}) {
+	if (Date.now() - product.lastSyncedAt.getTime() < SOURCE_PRODUCT_REFRESH_TTL_MS) return false;
+	const imageUrls = toImageUrlArray(product.imageUrls);
+	if (isPlaceholderImageUrl(imageUrls[0])) return true;
+	if (product.listingDate && product.orderDeadline && product.listingDate.getTime() > product.orderDeadline.getTime()) {
+		return true;
+	}
+	return false;
+}
+
+async function refreshSourceProductIfNeeded(product: {
+	supplierId: string;
+	imageUrls: unknown;
+	listingDate: Date | null;
+	orderDeadline: Date | null;
+	lastSyncedAt: Date;
+}) {
+	if (!shouldRefreshSourceProduct(product)) return;
+	const refreshed = await crawlAnismileProductBySupplierId(product.supplierId).catch(() => null);
+	if (!refreshed) return;
+	await upsertProductsFromSync(
+		[{
+			supplierId: refreshed.supplierId,
+			sourceUrl: refreshed.sourceUrl,
+			titleOriginal: refreshed.titleOriginal,
+			titleTranslated: refreshed.titleTranslated,
+			descriptionOriginal: refreshed.descriptionOriginal,
+			descriptionTranslated: refreshed.descriptionTranslated,
+			imageUrls: refreshed.imageUrls,
+			category: refreshed.category,
+			series: refreshed.series,
+			originalPrice: refreshed.originalPrice,
+			costPrice: refreshed.costPrice,
+			listingDate: refreshed.listingDate,
+			orderDeadline: refreshed.orderDeadline,
+			inStock: refreshed.inStock,
+			stockQuantity: refreshed.stockQuantity,
+			lastSyncedAt: new Date(),
+			discountRate: refreshed.discountRate,
+			brand: refreshed.brand,
+			franchise: refreshed.franchise,
+			janCode: refreshed.janCode,
+			releaseDate: refreshed.releaseDate,
+		}],
+		{ markMissingOutOfStock: false },
+	);
+}
+
 async function getSourceSeriesImageMap() {
+	if (seriesImageCache && seriesImageCache.expiresAt > Date.now()) {
+		return seriesImageCache.map;
+	}
+
 	const responses = await Promise.all(
-		Array.from({ length: 30 }, async (_, dateIndex) => {
+		Array.from({ length: 7 }, async (_, dateIndex) => {
 			const url = new URL(`${ANISMILE_ORIGIN}/series_list/index`);
 			url.searchParams.set("lang", "en");
 			url.searchParams.set("dateIndex", String(dateIndex));
@@ -72,7 +133,12 @@ async function getSourceSeriesImageMap() {
 		}),
 	).catch(() => []);
 
-	return new Map(responses.flat());
+	const map = new Map(responses.flat());
+	seriesImageCache = {
+		expiresAt: Date.now() + SERIES_IMAGE_CACHE_TTL_MS,
+		map,
+	};
+	return map;
 }
 
 function getSeriesFallbackImage(series: string | null, seriesImageMap: Map<string, string>) {
@@ -89,6 +155,18 @@ function getDisplayImageUrls(product: { imageUrls: unknown; series: string | nul
 	if (!isPlaceholderImageUrl(imageUrls[0])) return imageUrls;
 	const fallbackImage = getSeriesFallbackImage(product.series, seriesImageMap);
 	return fallbackImage ? [fallbackImage, ...imageUrls.filter((url) => !isPlaceholderImageUrl(url))] : imageUrls;
+}
+
+async function getSeriesImageMapForProducts(products: Array<{ imageUrls: unknown; lastSyncedAt?: Date | null }>) {
+	const needsFallback = products.some((product) => {
+		if (!isPlaceholderImageUrl(toImageUrlArray(product.imageUrls)[0])) return false;
+		if (product.lastSyncedAt && Date.now() - product.lastSyncedAt.getTime() < SOURCE_PRODUCT_REFRESH_TTL_MS) return false;
+		return true;
+	});
+	if (!needsFallback) {
+		return new Map<string, string>();
+	}
+	return await getSourceSeriesImageMap();
 }
 
 const listProductsInput = z.object({
@@ -143,6 +221,7 @@ export const listProducts = publicProcedure
 						costPrice: item.costPrice,
 						listingDate: item.listingDate,
 						orderDeadline: item.orderDeadline,
+						inStock: item.inStock,
 						stockQuantity: item.stockQuantity,
 						lastSyncedAt: new Date(),
 						discountRate: item.discountRate,
@@ -165,7 +244,7 @@ export const listProducts = publicProcedure
 				});
 			}
 		}
-		const seriesImageMap = await getSourceSeriesImageMap();
+		const seriesImageMap = await getSeriesImageMapForProducts(result.items);
 
 		return {
 			...result,
@@ -203,7 +282,7 @@ export const listProductsAdmin = anismileAdminProcedure
 			listingDate,
 			onlyInStock: false,
 		});
-		const seriesImageMap = await getSourceSeriesImageMap();
+		const seriesImageMap = await getSeriesImageMapForProducts(result.items);
 
 		return {
 			...result,
@@ -239,7 +318,7 @@ export const listLatestProducts = publicProcedure
 	.handler(async ({ input, context }) => {
 		const showPrices = await canSeePricing(context.headers);
 		const items = await listLatestAnismileProducts(input.limit);
-		const seriesImageMap = await getSourceSeriesImageMap();
+		const seriesImageMap = await getSeriesImageMapForProducts(items);
 		return items.map((item) => ({
 			id: item.id,
 			titleTranslated: item.titleTranslated,
@@ -261,11 +340,16 @@ export const getProductById = publicProcedure
 	.input(z.object({ id: z.string().min(1) }))
 	.handler(async ({ input: { id }, context }) => {
 		const showPrices = await canSeePricing(context.headers);
-		const product = await getAnismileProductById(id);
+		let product = await getAnismileProductById(id);
 		if (!product) {
 			throw new ORPCError("NOT_FOUND", { message: "Product not found" });
 		}
-		const seriesImageMap = await getSourceSeriesImageMap();
+		await refreshSourceProductIfNeeded(product);
+		product = await getAnismileProductById(id);
+		if (!product) {
+			throw new ORPCError("NOT_FOUND", { message: "Product not found" });
+		}
+		const seriesImageMap = await getSeriesImageMapForProducts([product]);
 
 		return {
 			id: product.id,
@@ -442,7 +526,7 @@ export const searchProducts = publicProcedure
 	.handler(async ({ input, context }) => {
 		const showPrices = await canSeePricing(context.headers);
 		const result = await searchAnismileProducts(input);
-		const seriesImageMap = await getSourceSeriesImageMap();
+		const seriesImageMap = await getSeriesImageMapForProducts(result.items);
 		return {
 			items: result.items.map((item) => serializeProduct(item, showPrices, seriesImageMap)),
 			total: result.total,
@@ -477,7 +561,7 @@ export const listByCategory = publicProcedure
 	.handler(async ({ input, context }) => {
 		const showPrices = await canSeePricing(context.headers);
 		const result = await listProductsByCategory(input);
-		const seriesImageMap = await getSourceSeriesImageMap();
+		const seriesImageMap = await getSeriesImageMapForProducts(result.items);
 		return {
 			items: result.items.map((item) => serializeProduct(item, showPrices, seriesImageMap)),
 			total: result.total,

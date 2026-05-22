@@ -39,6 +39,10 @@ export function CartPage() {
 
 	const cartTotal = useMemo(() => Number(cartQuery.data?.total ?? 0), [cartQuery.data]);
 	const itemCount = useMemo(() => cartItems.reduce((sum, item) => sum + item.quantity, 0), [cartItems]);
+	const hasUnavailableItems = useMemo(
+		() => cartItems.some((item) => item.isOrderable === false || Boolean(item.unavailableReason)),
+		[cartItems],
+	);
 	const groupedItems = useMemo(() => {
 		const groups = new Map<string, typeof cartItems>();
 		for (const item of cartItems) {
@@ -54,7 +58,7 @@ export function CartPage() {
 			return a.localeCompare(b);
 		});
 	}, [cartItems]);
-	const disabled = cartItems.length === 0;
+	const disabled = cartItems.length === 0 || hasUnavailableItems;
 
 	function handleExportCsv() {
 		if (cartItems.length === 0) {
@@ -129,6 +133,7 @@ export function CartPage() {
 										imageUrl={Array.isArray(item.product.imageUrls) ? String(item.product.imageUrls[0] ?? "") : ""}
 										quantity={item.quantity}
 										lineTotal={Number(item.lineTotal)}
+										unavailableReason={item.unavailableReason}
 										disabled={updateQuantityMutation.isPending || removeMutation.isPending}
 										onIncrement={(itemId, nextQuantity) => {
 											updateQuantityMutation.mutate({ itemId, quantity: nextQuantity });
@@ -151,6 +156,7 @@ export function CartPage() {
 				itemCount={itemCount}
 				subtotal={cartTotal}
 				disabled={disabled}
+				disabledReason={hasUnavailableItems ? "購物車內有已截止或無法下單的商品，請先移除後再結帳。" : null}
 				onSubmit={() => router.push("/checkout")}
 			/>
 		</div>

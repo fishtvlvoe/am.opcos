@@ -16,6 +16,7 @@ export type CrawledAnismileProduct = {
 	costPrice: number;
 	listingDate?: Date | null;
 	orderDeadline: Date | null;
+	inStock: boolean | null;
 	stockQuantity: number | null;
 	discountRate: number | null;
 	brand: string | null;
@@ -174,6 +175,16 @@ function parseSourceTimestamp(timestamp: number | null | undefined): Date | null
 	return new Date(timestamp * 1000);
 }
 
+function parseSourceAddTime(text: string | null | undefined): Date | null {
+	if (!text) return null;
+	const matched = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+	if (!matched) return null;
+	const year = Number.parseInt(matched[1], 10);
+	const month = Number.parseInt(matched[2], 10);
+	const day = Number.parseInt(matched[3], 10);
+	return new Date(Date.UTC(year, month - 1, day));
+}
+
 function parseProductEntriesFromSeriesPage(html: string, listingDate: Date | null): ProductEntry[] {
 	const ids = normalizeProductIds([...html.matchAll(/\/item\/(\d+)\//g)].map((match) => String(match[1])));
 	return ids.map((id) => ({ id, listingDate }));
@@ -236,12 +247,21 @@ export async function crawlAnismileProductsBySeriesName(seriesName: string, limi
 		});
 		const parsed = parseProductApi(res, id);
 		if (parsed) {
-			parsed.listingDate = listingDate;
+			parsed.listingDate ??= listingDate;
 			products.push(parsed);
 		}
 	}
 
 	return products;
+}
+
+export async function crawlAnismileProductBySupplierId(supplierId: string): Promise<CrawledAnismileProduct | null> {
+	const res = await fetchJson<AnismileProductResponse>(PRODUCT_API_URL, {
+		method: "POST",
+		headers: { "content-type": "application/x-www-form-urlencoded" },
+		body: new URLSearchParams({ item: supplierId, lang: "cn" }),
+	});
+	return parseProductApi(res, supplierId);
 }
 
 type AnismileProductResponse = {
@@ -251,9 +271,14 @@ type AnismileProductResponse = {
 		name: string;
 		price: string;
 		percent: { status: number; percent: string } | null;
+		status?: number;
+		is_stocked?: number;
+		stocked_number?: number;
 		deadline_date: string;
+		add_time?: string;
 		description: string;
 		main_image_url: string;
+		zoom?: { url?: string; thumb?: string };
 		albums: { url: string }[];
 		work_title: string[];
 		manufacturer: { name: string };
@@ -282,6 +307,9 @@ function parseProductApi(res: AnismileProductResponse, productId?: string): Craw
 	if (item.main_image_url && !imageUrls.includes(item.main_image_url)) {
 		imageUrls.unshift(item.main_image_url);
 	}
+	if (item.zoom?.url && !imageUrls.includes(item.zoom.url)) {
+		imageUrls.push(item.zoom.url);
+	}
 
 	const series = item.bundles?.name ?? null;
 	// work_title[0] は作品/IP 名称（franchise）であって商品カテゴリではない
@@ -303,8 +331,13 @@ function parseProductApi(res: AnismileProductResponse, productId?: string): Craw
 		series,
 		originalPrice,
 		costPrice,
+		listingDate: parseSourceAddTime(item.add_time),
 		orderDeadline: parseDeadlineDate(item.deadline_date),
-		stockQuantity: null,
+		inStock: item.status == null ? null : item.status === 1,
+		stockQuantity:
+			typeof item.stocked_number === "number" && item.is_stocked === 1
+				? item.stocked_number
+				: null,
 		discountRate,
 		brand,
 		franchise,
@@ -352,7 +385,7 @@ export async function crawlAnismileProductsWithStats({
 
 			const parsed = parseProductApi(res, id);
 			if (parsed) {
-				parsed.listingDate = listingDate;
+				parsed.listingDate ??= listingDate;
 				products.push(parsed);
 			} else {
 				productsSkipped += 1;
