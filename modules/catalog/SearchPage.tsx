@@ -51,6 +51,8 @@ export function SearchPage() {
 				page,
 				pageSize: PER_PAGE,
 				category: category || undefined,
+				inStock: false,
+				showUnavailable: true,
 			},
 		}),
 		enabled: isAllProductsMode,
