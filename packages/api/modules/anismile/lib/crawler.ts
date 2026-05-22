@@ -40,6 +40,7 @@ export type AnismileCrawlOptions = {
 	limit?: number;
 	delayMs?: number;
 	source?: "sitemap" | "homepage";
+	concurrency?: number;
 };
 
 const LOGIN_URL = "https://www.anismile.jp/login/index";
@@ -51,6 +52,10 @@ const SERIES_PAGE_BASE_URL = "https://www.anismile.jp/series";
 
 function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function parsePositiveInteger(value: number | undefined, fallback: number) {
+	return Number.isFinite(value) && value && value > 0 ? Math.floor(value) : fallback;
 }
 
 function parseDeadlineDate(text: string | null | undefined): Date | null {
@@ -359,6 +364,7 @@ export async function crawlAnismileProductsWithStats({
 	limit,
 	delayMs = 500,
 	source = "sitemap",
+	concurrency = 1,
 }: AnismileCrawlOptions = {}): Promise<AnismileCrawlResult> {
 	const cookie = await getAuthenticatedCookie();
 	const allProductEntries =
@@ -372,12 +378,13 @@ export async function crawlAnismileProductsWithStats({
 	let productsSkipped = 0;
 	let productsFailed = 0;
 	const failureReasons: string[] = [];
+	const safeConcurrency = Math.min(parsePositiveInteger(concurrency, 1), 16);
 
 	logger.info(
-		`[anismile] starting crawl: ${productEntries.length}/${allProductEntries.length} products (offset=${safeOffset}, limit=${safeLimit})`,
+		`[anismile] starting crawl: ${productEntries.length}/${allProductEntries.length} products (offset=${safeOffset}, limit=${safeLimit}, concurrency=${safeConcurrency})`,
 	);
 
-	for (const { id, listingDate } of productEntries) {
+	async function crawlEntry({ id, listingDate }: ProductEntry, index: number) {
 		try {
 			const res = await fetchJson<AnismileProductResponse>(PRODUCT_API_URL, {
 				method: "POST",
@@ -403,11 +410,22 @@ export async function crawlAnismileProductsWithStats({
 			logger.error(`[anismile] crawl failed for product ${id}`, error);
 		}
 
-		if (delayMs > 0) {
+		if (delayMs > 0 && index < productEntries.length - 1) {
 			const delay = delayMs + Math.floor(Math.random() * delayMs);
 			await sleep(delay);
 		}
 	}
+
+	let nextIndex = 0;
+	await Promise.all(
+		Array.from({ length: Math.min(safeConcurrency, productEntries.length) }, async () => {
+			while (nextIndex < productEntries.length) {
+				const index = nextIndex;
+				nextIndex += 1;
+				await crawlEntry(productEntries[index], index);
+			}
+		}),
+	);
 
 	logger.info(`[anismile] crawl complete: ${products.length}/${productEntries.length} products`);
 	return {

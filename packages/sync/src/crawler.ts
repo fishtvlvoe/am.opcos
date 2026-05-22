@@ -41,6 +41,7 @@ export async function runSync(): Promise<SyncResult> {
 	try {
 		const batchSize = Math.min(parsePositiveInteger(process.env.ANISMILE_SYNC_BATCH_SIZE, 250), 500);
 		const delayMs = Math.max(0, parsePositiveInteger(process.env.ANISMILE_SYNC_DELAY_MS, 100));
+		const concurrency = Math.min(parsePositiveInteger(process.env.ANISMILE_SYNC_CONCURRENCY, 4), 16);
 		const batchOffset = await getSyncCursor();
 		// 動態 import 避免 bundler 在 moduleResolution 模式下的 subpath 解析問題
 		const { crawlAnismileProductsWithStats } = await import("@repo/api/modules/anismile/lib/crawler");
@@ -48,6 +49,7 @@ export async function runSync(): Promise<SyncResult> {
 			offset: batchOffset,
 			limit: batchSize,
 			delayMs,
+			concurrency,
 		});
 		const products = crawlResult.products;
 
