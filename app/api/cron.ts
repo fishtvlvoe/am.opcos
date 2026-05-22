@@ -15,7 +15,7 @@ export function initAnismileCron() {
 		const syncLog = await createSyncLog();
 
 		try {
-			const products = await crawlAnismileProducts();
+			const products = await crawlAnismileProducts({ limit: 250, delayMs: 100 });
 			const result = await upsertProductsFromSync(
 				products.map((item) => ({
 					supplierId: item.supplierId,

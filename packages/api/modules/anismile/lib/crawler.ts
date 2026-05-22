@@ -39,6 +39,7 @@ export type AnismileCrawlOptions = {
 	offset?: number;
 	limit?: number;
 	delayMs?: number;
+	source?: "sitemap" | "homepage";
 };
 
 const LOGIN_URL = "https://www.anismile.jp/login/index";
@@ -168,6 +169,10 @@ async function getProductIds(): Promise<string[]> {
 	}
 
 	return normalizeProductIds(itemUrls.map(parseProductId).filter(Boolean));
+}
+
+async function getSitemapProductEntries(): Promise<ProductEntry[]> {
+	return (await getProductIds()).map((id) => ({ id, listingDate: null }));
 }
 
 function parseSourceTimestamp(timestamp: number | null | undefined): Date | null {
@@ -353,13 +358,13 @@ export async function crawlAnismileProductsWithStats({
 	offset = 0,
 	limit,
 	delayMs = 500,
+	source = "sitemap",
 }: AnismileCrawlOptions = {}): Promise<AnismileCrawlResult> {
 	const cookie = await getAuthenticatedCookie();
-	const homepageProductEntries = await getHomepageProductEntries();
 	const allProductEntries =
-		homepageProductEntries.length > 0
-			? homepageProductEntries
-			: (await getProductIds()).map((id) => ({ id, listingDate: null }));
+		source === "homepage"
+			? await getHomepageProductEntries()
+			: await getSitemapProductEntries();
 	const safeOffset = Math.max(0, offset);
 	const safeLimit = limit && limit > 0 ? limit : allProductEntries.length;
 	const productEntries = allProductEntries.slice(safeOffset, safeOffset + safeLimit);
@@ -416,7 +421,7 @@ export async function crawlAnismileProductsWithStats({
 	};
 }
 
-export async function crawlAnismileProducts(): Promise<CrawledAnismileProduct[]> {
-	const result = await crawlAnismileProductsWithStats();
+export async function crawlAnismileProducts(options: AnismileCrawlOptions = {}): Promise<CrawledAnismileProduct[]> {
+	const result = await crawlAnismileProductsWithStats(options);
 	return result.products;
 }

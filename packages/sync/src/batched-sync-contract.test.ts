@@ -24,7 +24,8 @@ describe("batched sync contract", () => {
 		expect(syncSource).toContain("Math.min(parsePositiveInteger(process.env.ANISMILE_SYNC_BATCH_SIZE, 250), 500)");
 		expect(crawlerSource).toContain("offset = 0");
 		expect(crawlerSource).toContain("limit");
-		expect(crawlerSource).toContain("getHomepageProductEntries");
+		expect(crawlerSource).toContain('source = "sitemap"');
+		expect(crawlerSource).toContain("getSitemapProductEntries");
 		expect(crawlerSource).toContain("allProductEntries.slice(safeOffset, safeOffset + safeLimit)");
 		expect(querySource).toContain("markMissingOutOfStock = true");
 		expect(querySource).toContain("timeout: transactionTimeoutMs");

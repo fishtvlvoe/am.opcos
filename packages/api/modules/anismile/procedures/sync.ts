@@ -5,7 +5,11 @@ import { crawlAnismileProductsWithStats } from "../lib/crawler";
 
 export async function runAnismileSyncJob(syncLogId: string) {
 	try {
-		const crawlResult = await crawlAnismileProductsWithStats();
+		const crawlResult = await crawlAnismileProductsWithStats({
+			source: "sitemap",
+			limit: 250,
+			delayMs: 100,
+		});
 		const crawledProducts = crawlResult.products;
 		const syncResult = await upsertProductsFromSync(
 			crawledProducts.map((item) => ({
