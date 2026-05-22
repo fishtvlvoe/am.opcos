@@ -49,6 +49,7 @@ const SITEMAP_URL = "https://www.anismile.jp/sitemap.xml";
 const SERIES_LIST_URL = "https://www.anismile.jp/series_list/index";
 const PRODUCT_PAGE_BASE_URL = "https://www.anismile.jp/item";
 const SERIES_PAGE_BASE_URL = "https://www.anismile.jp/series";
+let sitemapProductEntriesCache: ProductEntry[] | null = null;
 
 function sleep(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
@@ -177,7 +178,9 @@ async function getProductIds(): Promise<string[]> {
 }
 
 async function getSitemapProductEntries(): Promise<ProductEntry[]> {
-	return (await getProductIds()).map((id) => ({ id, listingDate: null }));
+	if (sitemapProductEntriesCache) return sitemapProductEntriesCache;
+	sitemapProductEntriesCache = (await getProductIds()).map((id) => ({ id, listingDate: null }));
+	return sitemapProductEntriesCache;
 }
 
 function parseSourceTimestamp(timestamp: number | null | undefined): Date | null {
