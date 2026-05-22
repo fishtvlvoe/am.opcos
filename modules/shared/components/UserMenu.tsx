@@ -68,6 +68,9 @@ export function UserMenu() {
 				</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 
+				<DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
+					我的帳戶
+				</DropdownMenuLabel>
 				<DropdownMenuItem asChild className="gap-2">
 					<Link href="/orders">
 						<ShoppingBagIcon className="size-4" />

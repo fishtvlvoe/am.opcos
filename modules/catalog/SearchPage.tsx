@@ -35,7 +35,7 @@ export function SearchPage() {
 	const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
 
 	const trimmed = q.trim();
-	const enabled = trimmed.length > 0;
+	const isAllProductsMode = trimmed.length === 0;
 
 	const filters = useMemo(() => {
 		const next: { category?: string; franchise?: string; brand?: string } = {};
@@ -45,30 +45,50 @@ export function SearchPage() {
 		return Object.keys(next).length ? next : undefined;
 	}, [brand, category, franchise]);
 
+	const allProductsQuery = useQuery({
+		...orpc.anismile.products.list.queryOptions({
+			input: {
+				page,
+				pageSize: PER_PAGE,
+				category: category || undefined,
+			},
+		}),
+		enabled: isAllProductsMode,
+	});
+
 	const searchQuery = useQuery({
 		...orpc.anismile.products.search.queryOptions({
 			input: {
-				query: enabled ? trimmed : "disabled",
+				query: trimmed,
 				filters,
 				sort: sort || undefined,
 				page,
 				perPage: PER_PAGE,
 			},
 		}),
-		enabled,
+		enabled: !isAllProductsMode,
+	});
+	const categoriesQuery = useQuery({
+		...orpc.anismile.categories.queryOptions({ input: {} }),
+		enabled: isAllProductsMode,
 	});
 
 	const facets = searchQuery.data?.facets;
 	const facetGroups = useMemo(() => {
 		const groups: Array<{ label: string; key: string; items: Array<{ name: string; count: number }> }> = [];
+		if (isAllProductsMode && categoriesQuery.data?.length) {
+			groups.push({ label: "分類", key: "category", items: categoriesQuery.data });
+			return groups;
+		}
 		if (facets?.categories?.length) groups.push({ label: "分類", key: "category", items: facets.categories });
 		if (facets?.franchises?.length) groups.push({ label: "作品系列", key: "franchise", items: facets.franchises });
 		if (facets?.brands?.length) groups.push({ label: "品牌", key: "brand", items: facets.brands });
 		return groups;
-	}, [facets]);
+	}, [categoriesQuery.data, facets, isAllProductsMode]);
 
-	const items = searchQuery.data?.items ?? [];
-	const total = searchQuery.data?.total ?? 0;
+	const activeQuery = isAllProductsMode ? allProductsQuery : searchQuery;
+	const items = activeQuery.data?.items ?? [];
+	const total = activeQuery.data?.total ?? 0;
 
 	return (
 		<div className="flex gap-6">
@@ -91,7 +111,14 @@ export function SearchPage() {
 
 			<div className="min-w-0 flex-1 space-y-4">
 				<div className="flex items-center justify-between gap-3">
-					<h1 className="font-semibold text-xl">搜尋</h1>
+					<div>
+						<h1 className="font-semibold text-xl">{isAllProductsMode ? "所有產品" : "搜尋"}</h1>
+						{isAllProductsMode ? (
+							<p className="mt-1 text-sm text-muted-foreground">
+								瀏覽目前同步的 anismile.jp 商品，可用分類篩選縮小範圍。
+							</p>
+						) : null}
+					</div>
 					<div className="w-40">
 						<Select
 							value={sort}
@@ -114,13 +141,11 @@ export function SearchPage() {
 					</div>
 				</div>
 
-				{!enabled ? (
-					<div className="py-24 text-center text-sm text-muted-foreground">請輸入搜尋關鍵字</div>
-				) : searchQuery.isPending ? (
+				{activeQuery.isPending ? (
 					<div className="py-24 text-center text-sm text-muted-foreground">載入中...</div>
 				) : items.length === 0 ? (
 					<div className="py-24 text-center text-sm text-muted-foreground">
-						找不到符合的商品，試試其他關鍵字
+						{isAllProductsMode ? "目前沒有可顯示的商品" : "找不到符合的商品，試試其他關鍵字"}
 					</div>
 				) : (
 					<>

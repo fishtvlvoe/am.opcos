@@ -44,6 +44,15 @@ describe("PublicHeader", () => {
 		expect(source).toContain("ShoppingCartIcon");
 		expect(source).toContain('href="/cart"');
 	});
+
+	it("登入後重用角色分層的 UserMenu，不維護縮減版後台選單", () => {
+		const source = read(filePath);
+		expect(source).toContain('import { UserMenu } from "./UserMenu"');
+		expect(source).toContain("<UserMenu />");
+		expect(source).not.toContain("const isAdmin");
+		expect(source).not.toContain("管理後台");
+		expect(source).not.toContain('href="/admin"');
+	});
 });
 
 describe("AniSmile wordmark asset", () => {

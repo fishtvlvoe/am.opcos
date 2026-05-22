@@ -22,7 +22,7 @@ const categoryTabs = [
 		label: "生活雜貨",
 		subs: ["文具", "日用品", "收納", "化妝品"],
 	},
-	{ label: "全部系列", subs: [] },
+	{ label: "全部系列", subs: [], href: "/search" },
 ];
 
 export function CategoryNav() {
@@ -47,27 +47,39 @@ export function CategoryNav() {
 			<div className="container">
 				<div className="relative" data-category-nav>
 					<div className="flex items-center gap-1 overflow-x-auto py-2 no-scrollbar">
-						{categoryTabs.map((cat, idx) => (
-							<button
-								key={cat.label}
-								type="button"
-								ref={(el) => { buttonRefs.current[idx] = el; }}
-								onClick={() => setOpenIndex(openIndex === idx ? null : idx)}
-								className={cn(
-									"inline-flex flex-shrink-0 items-center gap-1 rounded-lg px-5 py-2.5 text-[13.5px] font-medium transition-colors text-white",
-									openIndex === idx
-										? "bg-[#d6628a]"
-										: "bg-[#e9739a] hover:bg-[#d6628a]",
-								)}
-							>
-								{cat.label}
-								{cat.subs.length > 0 && (
-									<ChevronDownIcon
-										className={cn("size-3.5 transition-transform", openIndex === idx && "rotate-180")}
-									/>
-								)}
-							</button>
-						))}
+						{categoryTabs.map((cat, idx) => {
+							const className = cn(
+								"inline-flex flex-shrink-0 items-center gap-1 rounded-lg px-5 py-2.5 text-[13.5px] font-medium transition-colors text-white",
+								openIndex === idx
+									? "bg-[#d6628a]"
+									: "bg-[#e9739a] hover:bg-[#d6628a]",
+							);
+
+							if (cat.href) {
+								return (
+									<Link key={cat.label} href={cat.href} className={className}>
+										{cat.label}
+									</Link>
+								);
+							}
+
+							return (
+								<button
+									key={cat.label}
+									type="button"
+									ref={(el) => { buttonRefs.current[idx] = el; }}
+									onClick={() => setOpenIndex(openIndex === idx ? null : idx)}
+									className={className}
+								>
+									{cat.label}
+									{cat.subs.length > 0 && (
+										<ChevronDownIcon
+											className={cn("size-3.5 transition-transform", openIndex === idx && "rotate-180")}
+										/>
+									)}
+								</button>
+							);
+						})}
 					</div>
 
 					{openIndex !== null && activeSubs.length > 0 && (

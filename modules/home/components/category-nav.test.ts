@@ -39,6 +39,13 @@ describe("CategoryNav 元件", () => {
 		expect(source).toContain("全部系列");
 	});
 
+	it("全部系列是前往所有產品列表的 Link", () => {
+		const source = read(filePath);
+		expect(source).toContain('href: "/search"');
+		expect(source).toContain("cat.href");
+		expect(source).toContain('href={cat.href}');
+	});
+
 	it("包含 useState 管理展開狀態", () => {
 		const source = read(filePath);
 		expect(source).toContain("useState");
