@@ -43,7 +43,7 @@ export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
 	const [showFilter, setShowFilter] = useState(false);
 	const [inStockFilter, setInStockFilter] = useState(false);
 	const [urgentFilter, setUrgentFilter] = useState(false);
-	const [showUnavailable, setShowUnavailable] = useState(false);
+	const [showUnavailable, setShowUnavailable] = useState(true);
 
 	const queryClient = useQueryClient();
 
@@ -90,7 +90,7 @@ export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
 				pageSize,
 				inStock: inStockFilter ? true : false,
 				urgentDeadline: urgentFilter || undefined,
-				showUnavailable: showUnavailable || undefined,
+				showUnavailable,
 			},
 		}),
 	);

@@ -172,11 +172,16 @@ export async function listAnismileProducts({
 	if (!showUnavailable) {
 		andConditions.push({ OR: [{ orderDeadline: null }, { orderDeadline: { gte: today } }] });
 	}
+	if (series) {
+		const seriesTerms = Array.from(new Set([series, series.replaceAll("截單", "截单"), series.replaceAll("截单", "截單")]));
+		andConditions.push({
+			OR: seriesTerms.map((term) => ({ series: { startsWith: term } })),
+		});
+	}
 
 	const where: Prisma.AnismileProductWhereInput = {
 		inStock: onlyInStock ? true : undefined,
 		category: category ? category : undefined,
-		series: series ? { startsWith: series } : undefined,
 		listingDate: listingDate
 			? { gte: listingDate, lt: new Date(listingDate.getTime() + 24 * 60 * 60 * 1000) }
 			: undefined,

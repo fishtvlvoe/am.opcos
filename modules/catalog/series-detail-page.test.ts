@@ -36,6 +36,14 @@ describe("SeriesDetailPage 系列詳情頁結構契約", () => {
 		expect(source).toContain("orpc");
 	});
 
+	it("系列頁預設包含已同步商品，避免已截止資料被濾成空白", () => {
+		const source = read(
+			"modules/catalog/SeriesDetailPage.tsx",
+		);
+		expect(source).toContain("useState(true)");
+		expect(source).toContain("showUnavailable,");
+	});
+
 	it("包含 CSV 下載（Blob 建構）", () => {
 		const source = read(
 			"modules/catalog/SeriesDetailPage.tsx",
