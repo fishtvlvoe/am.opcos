@@ -57,12 +57,12 @@ describe("HomePage 頁面結構", () => {
 		expect(source).not.toContain("查看更多 »");
 	});
 
-	it("首頁使用三欄 FranchiseBanner 取代單張 BannerCarousel", () => {
+	it("首頁使用 source banner feed 驅動三欄 FranchiseBanner", () => {
 		const source = read(filePath);
 		expect(source).toContain("FranchiseBanner");
-		expect(source).toContain("franchiseBannerItems");
-		expect(source).toContain("dateIndex: 0");
-		expect(source).toContain("limit: 6");
+		expect(source).toContain("getBanners");
+		expect(source).toContain("sourceBannerItems");
+		expect(source).not.toContain("franchiseQuery");
 		expect(source).not.toContain("function BannerCarousel");
 		expect(source).not.toContain("<BannerCarousel />");
 		expect(source).not.toContain("useEmblaCarousel");

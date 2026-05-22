@@ -97,9 +97,15 @@ export function PublicHeader() {
 	return (
 		<header className="sticky top-0 z-40 border-b border-stone-200 bg-white/95 backdrop-blur">
 			<div className="container flex h-14 items-center justify-between gap-3">
-				<Link href="/" className="flex shrink-0 items-center gap-2.5">
-					<Image src="/logo.svg" alt="AniSmile" width={36} height={36} />
-					<span className="text-[15px] font-semibold tracking-tight text-stone-900">AniSmile</span>
+				<Link href="/" className="flex shrink-0 items-center">
+					<Image
+						src="/logo-wordmark.png"
+						alt="AniSmile"
+						width={180}
+						height={42}
+						className="h-auto w-[120px] sm:w-[150px] md:w-[180px]"
+						priority
+					/>
 				</Link>
 
 				<SearchBox className="mx-4 hidden max-w-[652px] flex-1 md:block" />

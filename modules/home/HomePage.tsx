@@ -101,14 +101,16 @@ function Footer() {
 // ─── 首頁 ──────────────────────────────────────────────────────────────────────
 
 export function HomePage() {
-	const franchiseQuery = useQuery(orpc.anismile.homepage.getSeriesList.queryOptions({
-		input: { dateIndex: 0, limit: 6 },
+	const sourceBannerQuery = useQuery(orpc.anismile.homepage.getBanners.queryOptions({
+		input: {},
 	}));
-	const franchiseBannerItems = (franchiseQuery.data?.items ?? [])
-		.map((series) => ({
-			franchise: series.name,
-			image: series.imageUrl,
-			category: series.name,
+	const sourceBannerItems = (sourceBannerQuery.data?.banners ?? [])
+		.map((banner) => ({
+			name: banner.name ?? "AniSmile banner",
+			image: banner.imageUrl,
+			href: banner.linkUrl,
+			copyrightText: banner.copyrightText,
+			copyrightColor: banner.copyrightColor,
 		}))
 		.filter((item) => item.image);
 
@@ -117,7 +119,7 @@ export function HomePage() {
 			<AnnouncementBanner helpUrl="#" />
 			<CategoryNav />
 			<main className="container py-8">
-				<FranchiseBanner items={franchiseBannerItems} />
+				<FranchiseBanner items={sourceBannerItems} />
 				<ListingSection />
 				<HotSearchTags />
 				<DeadlineSection />

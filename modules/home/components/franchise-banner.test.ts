@@ -9,16 +9,20 @@ function read(relativePath: string) {
 describe("FranchiseBanner", () => {
 	const filePath = "modules/home/components/FranchiseBanner.tsx";
 
-	it("每組最多顯示三個 franchise 並維持 200px 高度", () => {
+	it("每組最多顯示三個 source banner 並維持 200px 高度", () => {
 		const source = read(filePath);
 		expect(source).toContain("groupIndex * 3");
 		expect(source).toContain("groupIndex * 3 + 3");
 		expect(source).toContain("h-[200px]");
 	});
 
-	it("每個 franchise 連到 /series/{category}", () => {
+	it("每個 source banner 使用 href 並顯示 copyright overlay", () => {
 		const source = read(filePath);
-		expect(source).toContain("`/series/${encodeURIComponent(item.category)}`");
+		expect(source).toContain("item.href");
+		expect(source).toContain("item.copyrightText");
+		expect(source).toContain("item.copyrightColor");
+		expect(source).toContain("alt={item.name}");
+		expect(source).not.toContain("`/series/${encodeURIComponent(item.category)}`");
 		expect(source).not.toContain("/categories/");
 	});
 });

@@ -9,11 +9,14 @@ function read(relativePath: string) {
 describe("PublicHeader", () => {
 	const filePath = "modules/shared/components/PublicHeader.tsx";
 
-	it("使用 AniSmile logo SVG 取代黑色 A 方塊", () => {
+	it("使用 anismile.jp wordmark 取代自製 logo SVG 作為主要品牌圖", () => {
 		const source = read(filePath);
-		expect(source).toContain('src="/logo.svg"');
+		expect(source).toContain('src="/logo-wordmark.png"');
 		expect(source).toContain('alt="AniSmile"');
-		expect(source).toContain(">AniSmile<");
+		expect(source).toContain("width={180}");
+		expect(source).toContain("height={42}");
+		expect(source).not.toContain('src="/logo.svg"');
+		expect(source).not.toContain(">AniSmile<");
 		expect(source).not.toContain("bg-stone-900 text-sm font-semibold text-white");
 	});
 
@@ -43,13 +46,11 @@ describe("PublicHeader", () => {
 	});
 });
 
-describe("AniSmile logo asset", () => {
-	it("存在 logo.svg 並包含品牌三色", () => {
-		const logoPath = resolve(process.cwd(), "public/logo.svg");
+describe("AniSmile wordmark asset", () => {
+	it("存在 logo-wordmark.png", () => {
+		const logoPath = resolve(process.cwd(), "public/logo-wordmark.png");
 		expect(existsSync(logoPath)).toBe(true);
-		const source = readFileSync(logoPath, "utf8");
-		expect(source).toContain("#e91e8c");
-		expect(source).toContain("#27aae1");
-		expect(source).toContain("#f7941d");
+		const source = readFileSync(logoPath);
+		expect(source.byteLength).toBeGreaterThan(1000);
 	});
 });

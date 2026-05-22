@@ -5,9 +5,11 @@ import { useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 interface FranchiseBannerItem {
-	franchise: string;
+	name: string;
 	image: string;
-	category: string;
+	href?: string;
+	copyrightText?: string;
+	copyrightColor?: string;
 }
 
 interface FranchiseBannerProps {
@@ -26,19 +28,42 @@ export function FranchiseBanner({ items }: FranchiseBannerProps) {
 	return (
 		<div className="relative mb-4 h-[200px]">
 			<div className="flex h-full gap-2">
-				{group.map((item) => (
-					<Link
-						key={item.category}
-						href={`/series/${encodeURIComponent(item.category)}`}
-						className="flex-1 overflow-hidden rounded-xl"
-					>
+				{group.map((item) => {
+					const content = (
+						<>
 						<img
 							src={item.image}
-							alt={item.franchise}
+							alt={item.name}
 							className="size-full object-cover"
 						/>
-					</Link>
-				))}
+							{item.copyrightText && (
+								<span
+									className="absolute bottom-2 left-2 right-2 text-[11px] font-medium drop-shadow"
+									style={{ color: item.copyrightColor ?? "white" }}
+								>
+									{item.copyrightText}
+								</span>
+							)}
+						</>
+					);
+
+					return item.href ? (
+						<Link
+							key={item.href}
+							href={item.href}
+							className="relative flex-1 overflow-hidden rounded-xl"
+						>
+							{content}
+						</Link>
+					) : (
+						<div
+							key={item.name}
+							className="relative flex-1 overflow-hidden rounded-xl"
+						>
+							{content}
+						</div>
+					);
+				})}
 			</div>
 
 			{canPrev && (

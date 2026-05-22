@@ -28,6 +28,8 @@ type SourceBannerResponse = {
 	items?: Array<{
 		name?: string;
 		link?: string;
+		copyright_text?: string;
+		copyright_color?: string;
 		file?: { url?: string };
 	}>;
 };
@@ -101,6 +103,9 @@ function getDisplayImageUrls(product: { imageUrls: unknown; series: string | nul
 interface BannerItem {
 	imageUrl: string;
 	linkUrl?: string;
+	name?: string;
+	copyrightText?: string;
+	copyrightColor?: string;
 }
 
 // 取得首頁 Banner 列表
@@ -112,18 +117,22 @@ export const getBanners = publicProcedure
 		summary: "Get homepage banners",
 	})
 	.handler(async () => {
-		const setting = await db.anismileSetting.findFirst({
-			where: { key: "homepage_banners" },
-			select: { value: true },
-		});
+		try {
+			const setting = await db.anismileSetting.findFirst({
+				where: { key: "homepage_banners" },
+				select: { value: true },
+			});
 
-		if (setting?.value) {
-			try {
-				const banners = JSON.parse(setting.value) as BannerItem[];
-				if (Array.isArray(banners) && banners.length > 0) return { banners };
-			} catch {
-				// DB 設定壞掉時退回 anismile.jp 原站 banner，避免首頁空白。
+			if (setting?.value) {
+				try {
+					const banners = JSON.parse(setting.value) as BannerItem[];
+					if (Array.isArray(banners) && banners.length > 0) return { banners };
+				} catch {
+					// DB 設定壞掉時退回 anismile.jp 原站 banner，避免首頁空白。
+				}
 			}
+		} catch {
+			// 本地驗收可能沒有可用 DB；banner 仍可由 anismile.jp source feed 顯示。
 		}
 
 		const response = await fetch(`${ANISMILE_ORIGIN}/banner/index?lang=en`, {
@@ -133,8 +142,11 @@ export const getBanners = publicProcedure
 		const payload = (await response.json()) as SourceBannerResponse;
 		const banners = (payload.items ?? [])
 			.map((item) => ({
+				name: item.name,
 				imageUrl: normalizeSourceImageUrl(item.file?.url),
 				linkUrl: normalizeSourceLinkUrl(item.link),
+				copyrightText: item.copyright_text,
+				copyrightColor: item.copyright_color,
 			}))
 			.filter((item) => item.imageUrl);
 
