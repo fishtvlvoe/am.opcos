@@ -42,6 +42,10 @@ export async function runSync(): Promise<SyncResult> {
 		const batchSize = Math.min(parsePositiveInteger(process.env.ANISMILE_SYNC_BATCH_SIZE, 250), 500);
 		const delayMs = Math.max(0, parsePositiveInteger(process.env.ANISMILE_SYNC_DELAY_MS, 100));
 		const concurrency = Math.min(parsePositiveInteger(process.env.ANISMILE_SYNC_CONCURRENCY, 4), 16);
+		const transactionTimeoutMs = Math.max(
+			60_000,
+			parsePositiveInteger(process.env.ANISMILE_SYNC_TRANSACTION_TIMEOUT_MS, 60_000),
+		);
 		const batchOffset = await getSyncCursor();
 		// 動態 import 避免 bundler 在 moduleResolution 模式下的 subpath 解析問題
 		const { crawlAnismileProductsWithStats } = await import("@repo/api/modules/anismile/lib/crawler");
@@ -79,7 +83,7 @@ export async function runSync(): Promise<SyncResult> {
 			})),
 			{
 				markMissingOutOfStock: false,
-				transactionTimeoutMs: 60_000,
+				transactionTimeoutMs,
 			},
 		);
 
