@@ -9,14 +9,14 @@ function read(relativePath: string) {
 describe("SearchPage all-products mode", () => {
 	const filePath = "modules/catalog/SearchPage.tsx";
 
-	it("空查詢時顯示所有產品而不是只要求輸入關鍵字", () => {
+	it("空查詢時仍載入商品結果而不是只要求輸入關鍵字", () => {
 		const source = read(filePath);
 
 		expect(source).toContain("orpc.anismile.products.list.queryOptions");
 		expect(source).toContain("const isAllProductsMode = trimmed.length === 0");
 		expect(source).not.toContain("showUnavailable: true");
-		expect(source).toContain("所有產品");
-		expect(source).toContain("瀏覽目前同步的日本供應商商品");
+		expect(source).toContain("搜尋結果");
+		expect(source).toContain("共 {total} 件");
 		expect(source).not.toContain("請輸入搜尋關鍵字");
 	});
 
@@ -32,7 +32,7 @@ describe("SearchPage all-products mode", () => {
 
 		expect(source).toContain("orpc.anismile.products.search.queryOptions");
 		expect(source).toContain("enabled: !isAllProductsMode");
-		expect(source).toContain("isAllProductsMode ? \"所有產品\" : \"搜尋\"");
+		expect(source).toContain("<h1 className=\"font-semibold text-2xl text-stone-950\">搜尋結果</h1>");
 		expect(source).toContain("query: trimmed");
 	});
 });

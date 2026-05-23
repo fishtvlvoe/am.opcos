@@ -187,7 +187,10 @@ const listProductsInput = z.object({
 	inStock: z.boolean().optional(),
 	urgentDeadline: z.boolean().optional(),
 	showUnavailable: z.boolean().optional(),
+	sort: z.string().optional(),
 });
+
+const productSortSchema = z.string().trim().min(1).max(32);
 
 export const listProducts = publicProcedure
 	.route({
@@ -207,9 +210,10 @@ export const listProducts = publicProcedure
 			series: input.series,
 			search: input.search,
 			listingDate,
-			onlyInStock: true,
+			onlyInStock: !input.showUnavailable || input.inStock === true,
 			urgentDeadline: input.urgentDeadline,
-			showUnavailable: false,
+			showUnavailable: input.showUnavailable,
+			sort: input.sort,
 		});
 		if (input.series && result.total === 0) {
 			const crawledProducts = await crawlAnismileProductsBySeriesName(input.series);
@@ -246,9 +250,10 @@ export const listProducts = publicProcedure
 					series: input.series,
 					search: input.search,
 					listingDate,
-					onlyInStock: true,
+					onlyInStock: !input.showUnavailable || input.inStock === true,
 					urgentDeadline: input.urgentDeadline,
-					showUnavailable: false,
+					showUnavailable: input.showUnavailable,
+					sort: input.sort,
 				});
 			}
 		}
@@ -261,11 +266,16 @@ export const listProducts = publicProcedure
 				titleTranslated: item.titleTranslated,
 				titleOriginal: item.titleOriginal,
 				imageUrls: getDisplayImageUrls(item, seriesImageMap),
+				sourceUrl: item.sourceUrl,
 				category: item.category,
 				series: item.series,
+				janCode: item.janCode,
+				brand: item.brand,
+				franchise: item.franchise,
 				sellingPrice: publicPrice(toNumberRequired(item.sellingPrice), showPrices),
 				listingDate: item.listingDate,
 					orderDeadline: item.orderDeadline,
+					releaseDate: item.releaseDate,
 					inStock: item.inStock,
 				})),
 			};
@@ -470,6 +480,9 @@ const productFiltersShape = z.object({
 	category: z.string().optional(),
 	franchise: z.string().optional(),
 	brand: z.string().optional(),
+	showUnavailable: z.boolean().optional(),
+	inStock: z.boolean().optional(),
+	urgentDeadline: z.boolean().optional(),
 });
 
 function serializeProduct(p: {
@@ -529,7 +542,7 @@ export const searchProducts = publicProcedure
 		z.object({
 			query: z.string().min(1),
 			filters: productFiltersShape.optional(),
-			sort: z.string().optional(),
+			sort: productSortSchema.optional(),
 			page: z.number().int().min(1).optional(),
 			perPage: z.number().int().min(1).max(100).optional(),
 		}),

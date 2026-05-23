@@ -75,6 +75,21 @@ function normalizeProductSearchQuery(query: string) {
 	return query.trim().replace(/[\/／]+$/g, "").trim();
 }
 
+function resolveProductOrderBy(sort?: string): Prisma.AnismileProductOrderByWithRelationInput[] {
+	if (sort === "price_asc") return [{ sellingPrice: "asc" }];
+	if (sort === "price_desc") return [{ sellingPrice: "desc" }];
+	if (sort === "deadline") return [{ orderDeadline: { sort: "asc", nulls: "last" } }];
+	if (sort === "name") return [{ titleTranslated: "asc" }, { titleOriginal: "asc" }];
+	if (sort === "newest") return [{ listingDate: "desc" }, { createdAt: "desc" }];
+
+	// sales ranking fallback: AM does not have reliable public sales rank data yet.
+	if (sort === "sales_fallback" || sort === "sales" || sort === "relevance" || !sort) {
+		return [{ listingDate: "desc" }, { createdAt: "desc" }];
+	}
+
+	return [{ listingDate: "desc" }, { createdAt: "desc" }];
+}
+
 async function getSettingValue(key: string) {
 	const setting = await db.anismileSetting.findUnique({ where: { key } });
 	return setting?.value?.trim() || "";
@@ -217,6 +232,7 @@ export async function listAnismileProducts({
 	onlyInStock = true,
 	urgentDeadline,
 	showUnavailable,
+	sort = "sales_fallback",
 }: {
 	page?: number;
 	pageSize?: number;
@@ -227,6 +243,7 @@ export async function listAnismileProducts({
 	onlyInStock?: boolean;
 	urgentDeadline?: boolean;
 	showUnavailable?: boolean;
+	sort?: string;
 }) {
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
@@ -278,7 +295,7 @@ export async function listAnismileProducts({
 	const [items, total] = await Promise.all([
 		db.anismileProduct.findMany({
 			where,
-			orderBy: [{ listingDate: "desc" }, { createdAt: "desc" }],
+			orderBy: resolveProductOrderBy(sort),
 			take: pageSize,
 			skip: (page - 1) * pageSize,
 		}),
@@ -1197,6 +1214,9 @@ export async function searchAnismileProducts({
 		category?: string;
 		franchise?: string;
 		brand?: string;
+		showUnavailable?: boolean;
+		inStock?: boolean;
+		urgentDeadline?: boolean;
 	};
 	sort?: string;
 	page?: number;
@@ -1206,44 +1226,45 @@ export async function searchAnismileProducts({
 	const isJanCode = /^\d{8,14}$/.test(normalizedQuery);
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
+	const urgentEnd = new Date(today);
+	urgentEnd.setDate(urgentEnd.getDate() + 7);
+	const showUnavailable = filters?.showUnavailable ?? false;
+	const onlyInStock = !showUnavailable || filters?.inStock === true;
+
+	const andConditions: Prisma.AnismileProductWhereInput[] = [];
+	if (!showUnavailable) {
+		andConditions.push({ OR: [{ orderDeadline: null }, { orderDeadline: { gte: today } }] });
+	}
+	if (filters?.urgentDeadline) {
+		andConditions.push({ orderDeadline: { gte: today, lte: urgentEnd } });
+	}
+	andConditions.push(
+		isJanCode
+			? { janCode: { contains: normalizedQuery, mode: "insensitive" as const } }
+			: {
+					OR: [
+						{ titleOriginal: { contains: normalizedQuery, mode: "insensitive" as const } },
+						{ titleTranslated: { contains: normalizedQuery, mode: "insensitive" as const } },
+						{ descriptionTranslated: { contains: normalizedQuery, mode: "insensitive" as const } },
+						{ series: { contains: normalizedQuery, mode: "insensitive" as const } },
+						{ franchise: { contains: normalizedQuery, mode: "insensitive" as const } },
+						{ brand: { contains: normalizedQuery, mode: "insensitive" as const } },
+					],
+				},
+	);
 
 	const baseWhere: Prisma.AnismileProductWhereInput = {
-		inStock: true,
-		OR: [{ orderDeadline: null }, { orderDeadline: { gte: today } }],
+		inStock: onlyInStock ? true : undefined,
 		...(filters?.category ? { category: filters.category } : {}),
 		...(filters?.franchise ? { franchise: filters.franchise } : {}),
 		...(filters?.brand ? { brand: filters.brand } : {}),
-		...(isJanCode
-			? { AND: [{ janCode: { contains: normalizedQuery, mode: "insensitive" as const } }] }
-			: {
-					AND: [
-						{
-							OR: [
-								{ titleOriginal: { contains: normalizedQuery, mode: "insensitive" as const } },
-								{ titleTranslated: { contains: normalizedQuery, mode: "insensitive" as const } },
-								{ franchise: { contains: normalizedQuery, mode: "insensitive" as const } },
-								{ brand: { contains: normalizedQuery, mode: "insensitive" as const } },
-							],
-						},
-					],
-				}),
+		AND: andConditions,
 	};
-
-	const orderBy: Prisma.AnismileProductOrderByWithRelationInput[] =
-		sort === "price_asc"
-			? [{ sellingPrice: "asc" }]
-			: sort === "price_desc"
-				? [{ sellingPrice: "desc" }]
-				: sort === "deadline"
-					? [{ orderDeadline: { sort: "asc", nulls: "last" } }]
-					: sort === "newest"
-						? [{ listingDate: "desc" }]
-						: [{ listingDate: "desc" }, { createdAt: "desc" }];
 
 	const [items, total, catFacets, franchiseFacets, brandFacets] = await Promise.all([
 		db.anismileProduct.findMany({
 			where: baseWhere,
-			orderBy,
+			orderBy: resolveProductOrderBy(sort),
 			take: perPage,
 			skip: (page - 1) * perPage,
 		}),
