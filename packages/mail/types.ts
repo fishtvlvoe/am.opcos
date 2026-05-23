@@ -25,6 +25,11 @@ export interface SendEmailParams {
 	subject: string;
 	text: string;
 	html?: string;
+	attachments?: Array<{
+		type: string;
+		name: string;
+		content: string;
+	}>;
 }
 
 export type SendEmailHandler = (params: SendEmailParams) => Promise<void>;

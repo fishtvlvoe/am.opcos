@@ -18,10 +18,14 @@ export function AdminSettingsPage() {
 	// 升級門檻（整數 TWD）
 	const [wholesaleThreshold, setWholesaleThreshold] = useState("5000000");
 	const [vipThreshold, setVipThreshold] = useState("10000000");
+	const [adminLineUid, setAdminLineUid] = useState("");
+	const [adminOrderEmails, setAdminOrderEmails] = useState("");
+	const [supplierOrderEmails, setSupplierOrderEmails] = useState("");
 
 	const defaultMarkupQuery = useQuery(orpc.anismile.settings.getDefaultMarkup.queryOptions({ input: {} }));
 	const tierSettingsQuery = useQuery(orpc.anismile.settings.getTierSettings.queryOptions({ input: {} }));
 	const usersQuery = useQuery(orpc.anismile.users.listRoles.queryOptions({ input: {} }));
+	const notificationSettingsQuery = useQuery(orpc.anismile.notifications.getSettings.queryOptions({ input: {} }));
 
 	useEffect(() => {
 		if (tierSettingsQuery.data) {
@@ -31,6 +35,14 @@ export function AdminSettingsPage() {
 			setVipThreshold(String(tierSettingsQuery.data.vipThreshold));
 		}
 	}, [tierSettingsQuery.data]);
+
+	useEffect(() => {
+		if (notificationSettingsQuery.data) {
+			setAdminLineUid(notificationSettingsQuery.data.adminLineUid ?? "");
+			setAdminOrderEmails(notificationSettingsQuery.data.adminOrderEmails ?? "");
+			setSupplierOrderEmails(notificationSettingsQuery.data.supplierOrderEmails ?? "");
+		}
+	}, [notificationSettingsQuery.data]);
 
 	const markupMutation = useMutation(
 		orpc.anismile.settings.patchDefaultMarkup.mutationOptions({
@@ -59,6 +71,23 @@ export function AdminSettingsPage() {
 				void queryClient.invalidateQueries({ queryKey: orpc.anismile.users.listRoles.key() });
 			},
 			onError: (error) => toastError(error.message || "角色更新失敗"),
+		}),
+	);
+
+	const notificationMutation = useMutation(
+		orpc.anismile.notifications.patchSettings.mutationOptions({
+			onSuccess: () => {
+				toastSuccess("通知設定已更新");
+				void queryClient.invalidateQueries({ queryKey: orpc.anismile.notifications.getSettings.key() });
+			},
+			onError: (error) => toastError(error.message || "通知設定更新失敗"),
+		}),
+	);
+
+	const testLineMutation = useMutation(
+		orpc.anismile.notifications.testLine.mutationOptions({
+			onSuccess: () => toastSuccess("LINE 測試通知已送出"),
+			onError: (error) => toastError(error.message || "LINE 測試通知失敗"),
 		}),
 	);
 
@@ -171,6 +200,66 @@ export function AdminSettingsPage() {
 					<Button onClick={handleSaveTierSettings} disabled={tierMutation.isPending}>
 						儲存等級設定
 					</Button>
+				</CardContent>
+			</Card>
+
+			<Card>
+				<CardHeader>
+					<CardTitle>訂單通知設定</CardTitle>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+						<div className="space-y-1">
+							<label className="text-sm font-medium text-stone-700">管理者 LINE UID</label>
+							<Input
+								value={adminLineUid}
+								onChange={(e) => setAdminLineUid(e.target.value)}
+								placeholder="例如 Uxxxxxxxxxxxxxxxx"
+							/>
+							<p className="text-xs text-stone-400">
+								用於新訂單即時 LINE 通知；未填時會使用環境變數 fallback。
+							</p>
+						</div>
+						<div className="space-y-1">
+							<label className="text-sm font-medium text-stone-700">管理者每日摘要 Email</label>
+							<Input
+								value={adminOrderEmails}
+								onChange={(e) => setAdminOrderEmails(e.target.value)}
+								placeholder="admin@example.com, ops@example.com"
+							/>
+							<p className="text-xs text-stone-400">可用逗號分隔多個收件者。</p>
+						</div>
+					</div>
+					<div className="space-y-1">
+						<label className="text-sm font-medium text-stone-700">供應商訂單 Email</label>
+						<Input
+							value={supplierOrderEmails}
+							onChange={(e) => setSupplierOrderEmails(e.target.value)}
+							placeholder="supplier@example.com"
+						/>
+						<p className="text-xs text-stone-400">管理者確認訂單無誤後，系統會將 CSV pass 給這些收件者。</p>
+					</div>
+					<div className="flex flex-wrap gap-2">
+						<Button
+							onClick={() =>
+								notificationMutation.mutate({
+									adminLineUid,
+									adminOrderEmails,
+									supplierOrderEmails,
+								})
+							}
+							disabled={notificationMutation.isPending}
+						>
+							儲存通知設定
+						</Button>
+						<Button
+							variant="outline"
+							onClick={() => testLineMutation.mutate({ lineUid: adminLineUid })}
+							disabled={testLineMutation.isPending}
+						>
+							測試 LINE
+						</Button>
+					</div>
 				</CardContent>
 			</Card>
 

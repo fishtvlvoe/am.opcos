@@ -4,6 +4,9 @@ import { Prisma } from "../generated/client";
 const DEFAULT_MARKUP_KEY = "default_markup";
 const DEFAULT_MARKUP_VALUE = "1.2";
 const SYNC_CURSOR_KEY = "sync.cursor";
+const ADMIN_LINE_UID_KEY = "notifications.adminLineUid";
+const ADMIN_ORDER_EMAILS_KEY = "notifications.adminOrderEmails";
+const SUPPLIER_ORDER_EMAILS_KEY = "notifications.supplierOrderEmails";
 
 export const ORDER_STATUSES = ["pending", "confirmed", "shipped", "completed", "cancelled"] as const;
 export type AnismileOrderStatus = (typeof ORDER_STATUSES)[number];
@@ -59,6 +62,73 @@ export async function ensureDefaultMarkupSetting() {
 export async function getDefaultMarkup() {
 	const setting = await ensureDefaultMarkupSetting();
 	return new Prisma.Decimal(setting.value || DEFAULT_MARKUP_VALUE);
+}
+
+export function parseRecipientList(value: string | null | undefined) {
+	return (value ?? "")
+		.split(/[,\n]/)
+		.map((item) => item.trim())
+		.filter(Boolean);
+}
+
+async function getSettingValue(key: string) {
+	const setting = await db.anismileSetting.findUnique({ where: { key } });
+	return setting?.value?.trim() || "";
+}
+
+async function setSettingValue(key: string, value: string) {
+	return await db.anismileSetting.upsert({
+		where: { key },
+		create: { key, value },
+		update: { value },
+	});
+}
+
+export async function getAdminLineUidSetting() {
+	return await getSettingValue(ADMIN_LINE_UID_KEY);
+}
+
+export async function getAdminLineNotificationUid() {
+	return (await getAdminLineUidSetting()) || process.env.LINE_ADMIN_LINE_UID?.trim() || "";
+}
+
+export async function getAdminOrderEmailRecipients() {
+	return parseRecipientList(
+		(await getSettingValue(ADMIN_ORDER_EMAILS_KEY)) || process.env.ANISMILE_ADMIN_ORDER_EMAILS,
+	);
+}
+
+export async function getSupplierOrderEmailRecipients() {
+	return parseRecipientList(
+		(await getSettingValue(SUPPLIER_ORDER_EMAILS_KEY)) || process.env.ANISMILE_SUPPLIER_ORDER_EMAILS,
+	);
+}
+
+export async function getOrderNotificationSettings() {
+	return {
+		adminLineUid: await getAdminLineUidSetting(),
+		adminOrderEmails: await getSettingValue(ADMIN_ORDER_EMAILS_KEY),
+		supplierOrderEmails: await getSettingValue(SUPPLIER_ORDER_EMAILS_KEY),
+		hasLineToken: Boolean(process.env.LINE_CHANNEL_ACCESS_TOKEN?.trim()),
+		hasLineFallback: Boolean(process.env.LINE_ADMIN_LINE_UID?.trim()),
+	};
+}
+
+export async function updateOrderNotificationSettings({
+	adminLineUid,
+	adminOrderEmails,
+	supplierOrderEmails,
+}: {
+	adminLineUid: string;
+	adminOrderEmails: string;
+	supplierOrderEmails: string;
+}) {
+	await Promise.all([
+		setSettingValue(ADMIN_LINE_UID_KEY, adminLineUid.trim()),
+		setSettingValue(ADMIN_ORDER_EMAILS_KEY, adminOrderEmails.trim()),
+		setSettingValue(SUPPLIER_ORDER_EMAILS_KEY, supplierOrderEmails.trim()),
+	]);
+	return await getOrderNotificationSettings();
 }
 
 export async function getSyncCursor() {
@@ -934,9 +1004,11 @@ function canTransition(current: string, next: string) {
 export async function updateOrderStatus({
 	orderId,
 	status,
+	actorUserId,
 }: {
 	orderId: string;
 	status: AnismileOrderStatus;
+	actorUserId?: string;
 }) {
 	const order = await db.anismileOrder.findUnique({
 		where: {
@@ -962,6 +1034,12 @@ export async function updateOrderStatus({
 		},
 		data: {
 			status,
+			...(status === "confirmed"
+				? {
+					confirmedAt: order.confirmedAt ?? new Date(),
+					confirmedById: order.confirmedById ?? actorUserId,
+				}
+				: {}),
 		},
 	});
 }

@@ -42,6 +42,16 @@ export function AdminOrdersPage() {
 		}),
 	);
 
+	const forwardMutation = useMutation(
+		orpc.anismile.orders.forwardSupplier.mutationOptions({
+			onSuccess: () => {
+				toastSuccess("訂單已轉發供應商");
+				void queryClient.invalidateQueries({ queryKey: orpc.anismile.orders.list.key() });
+			},
+			onError: (error) => toastError(error.message || "供應商轉發失敗"),
+		}),
+	);
+
 	const exportQuery = useQuery(
 		orpc.anismile.orders.export.queryOptions({
 			input: {
@@ -100,6 +110,7 @@ export function AdminOrdersPage() {
 						<TableHead>狀態</TableHead>
 						<TableHead>金額</TableHead>
 						<TableHead>日期</TableHead>
+						<TableHead>供應商</TableHead>
 						<TableHead>更新狀態</TableHead>
 					</TableRow>
 				</TableHeader>
@@ -114,22 +125,46 @@ export function AdminOrdersPage() {
 							<TableCell>¥ {Number(row.totalAmount).toFixed(2)}</TableCell>
 							<TableCell>{format(new Date(row.createdAt), "yyyy-MM-dd HH:mm")}</TableCell>
 							<TableCell>
-								<select
-									className="rounded-md border bg-card px-2 py-1 text-sm"
-									defaultValue={row.status}
-									onChange={(event) =>
-										updateMutation.mutate({
-											id: row.id,
-											status: event.target.value as (typeof statuses)[number],
-										})
-									}
-								>
-									{statuses.map((item) => (
-										<option key={item} value={item}>
-											{statusLabels[item]}
-										</option>
-									))}
-								</select>
+								<div className="space-y-1 text-xs">
+									{row.supplierForwardedAt ? (
+										<Badge status="success">已轉發</Badge>
+									) : row.supplierForwardingError ? (
+										<Badge status="error">轉發失敗</Badge>
+									) : (
+										<Badge status="warning">未轉發</Badge>
+									)}
+									{row.supplierForwardingError ? (
+										<p className="max-w-[180px] truncate text-red-600">{row.supplierForwardingError}</p>
+									) : null}
+								</div>
+							</TableCell>
+							<TableCell>
+								<div className="flex flex-wrap items-center gap-2">
+									<select
+										className="rounded-md border bg-card px-2 py-1 text-sm"
+										defaultValue={row.status}
+										onChange={(event) =>
+											updateMutation.mutate({
+												id: row.id,
+												status: event.target.value as (typeof statuses)[number],
+											})
+										}
+									>
+										{statuses.map((item) => (
+											<option key={item} value={item}>
+												{statusLabels[item]}
+											</option>
+										))}
+									</select>
+									<Button
+										size="sm"
+										variant="outline"
+										onClick={() => forwardMutation.mutate({ id: row.id })}
+										disabled={row.status !== "confirmed" || Boolean(row.supplierForwardedAt) || forwardMutation.isPending}
+									>
+										轉發供應商
+									</Button>
+								</div>
 							</TableCell>
 						</TableRow>
 					))}

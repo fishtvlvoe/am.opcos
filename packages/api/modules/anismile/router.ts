@@ -17,6 +17,7 @@ import { listCategories } from "./procedures/categories";
 import {
 	createOrder,
 	exportOrdersCsv,
+	forwardOrderToSupplierProcedure,
 	getDashboardStats,
 	getOrderDetail,
 	listCustomers,
@@ -37,6 +38,7 @@ import {
 import { getBanners, getDeadlineProducts, getListingDates, getProductsByDate, getSeriesList } from "./procedures/homepage";
 import { confirmImportOrder, matchProducts } from "./procedures/import-order";
 import { adminUpdateTier, getMyTier } from "./procedures/member-tier";
+import { getNotificationSettings, patchNotificationSettings, testLineNotification } from "./procedures/notifications";
 import { adminBatchUpdateItemStatus, listProductPool } from "./procedures/product-pool";
 import { listUsersForRoles, patchUserRole } from "./procedures/roles";
 import { getDefaultMarkupSetting, getTierSettings, patchDefaultMarkup, patchTierSettings } from "./procedures/settings";
@@ -73,6 +75,11 @@ export const anismileRouter = {
 		getTierSettings,
 		patchTierSettings,
 	},
+	notifications: {
+		getSettings: getNotificationSettings,
+		patchSettings: patchNotificationSettings,
+		testLine: testLineNotification,
+	},
 	cart: {
 		add: addCartItem,
 		list: getCartItems,
@@ -89,6 +96,7 @@ export const anismileRouter = {
 		getById: getOrderDetail,
 		patch: patchOrderStatus,
 		export: exportOrdersCsv,
+		forwardSupplier: forwardOrderToSupplierProcedure,
 	},
 	admin: {
 		dashboard: getDashboardStats,

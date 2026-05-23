@@ -115,7 +115,7 @@ export type AnismileWishlistItemScalarFieldEnum = z.infer<typeof AnismileWishlis
 
 // File: AnismileOrderScalarFieldEnum.schema.ts
 
-export const AnismileOrderScalarFieldEnumSchema = z.enum(['id', 'userId', 'status', 'totalAmount', 'shippingName', 'shippingPhone', 'shippingAddress', 'notes', 'createdAt', 'updatedAt'])
+export const AnismileOrderScalarFieldEnumSchema = z.enum(['id', 'userId', 'status', 'totalAmount', 'shippingName', 'shippingPhone', 'shippingAddress', 'notes', 'confirmedAt', 'confirmedById', 'supplierForwardedAt', 'supplierForwardedById', 'supplierForwardingError', 'createdAt', 'updatedAt'])
 
 export type AnismileOrderScalarFieldEnum = z.infer<typeof AnismileOrderScalarFieldEnumSchema>;
 
@@ -521,6 +521,11 @@ export const AnismileOrderSchema = z.object({
   shippingPhone: z.string(),
   shippingAddress: z.string(),
   notes: z.string().nullish(),
+  confirmedAt: z.date().nullish(),
+  confirmedById: z.string().nullish(),
+  supplierForwardedAt: z.date().nullish(),
+  supplierForwardedById: z.string().nullish(),
+  supplierForwardingError: z.string().nullish(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

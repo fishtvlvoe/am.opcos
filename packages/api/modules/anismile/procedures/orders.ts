@@ -14,6 +14,7 @@ import { z } from "zod";
 
 import { anismileAdminProcedure, protectedProcedure } from "../../../orpc/procedures";
 import { generateOrdersCsv } from "../lib/csv-export";
+import { forwardOrderToSupplier } from "../lib/supplier-forwarding";
 import { toNumberRequired } from "../lib/serialize";
 
 const orderStatusSchema = z.enum(ORDER_STATUSES);
@@ -178,6 +179,26 @@ export const getOrderDetail = protectedProcedure
 		};
 	});
 
+async function sendShipmentEmail(orderId: string) {
+	const order = await getOrderById(orderId);
+	if (!order) return;
+	await sendEmail({
+		to: order.user.email,
+		subject: `訂單已出貨 #${order.id.slice(0, 8)}`,
+		text: [
+			`親愛的 ${order.user.name || order.user.email}，您的 AM 訂單已出貨。`,
+			`訂單編號：${order.id}`,
+			"",
+			"如有任何問題，請回覆此 Email 聯繫我們。",
+		].join("\n"),
+		html: [
+			`<p>親愛的 ${order.user.name || order.user.email}，您的 AM 訂單已出貨。</p>`,
+			`<p>訂單編號：${order.id}</p>`,
+			"<p>如有任何問題，請回覆此 Email 聯繫我們。</p>",
+		].join(""),
+	});
+}
+
 export const patchOrderStatus = anismileAdminProcedure
 	.route({
 		method: "PATCH",
@@ -191,18 +212,53 @@ export const patchOrderStatus = anismileAdminProcedure
 			status: orderStatusSchema,
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context: { user } }) => {
 		try {
 			const order = await updateOrderStatus({
 				orderId: input.id,
 				status: input.status,
+				actorUserId: user.id,
 			});
+			if (input.status === "shipped") {
+				void sendShipmentEmail(input.id).catch((error) => console.error("[email] shipment notify failed", error));
+			}
 			return {
 				...order,
 				totalAmount: toNumberRequired(order.totalAmount),
 			};
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Failed to update order status";
+			if (message.includes("not found")) {
+				throw new ORPCError("NOT_FOUND", { message });
+			}
+			throw new ORPCError("BAD_REQUEST", { message });
+		}
+	});
+
+export const forwardOrderToSupplierProcedure = anismileAdminProcedure
+	.route({
+		method: "POST",
+		path: "/anismile/orders/{id}/forward-supplier",
+		tags: ["Anismile"],
+		summary: "Forward confirmed order to supplier",
+	})
+	.input(
+		z.object({
+			id: z.string().min(1),
+		}),
+	)
+	.handler(async ({ input, context: { user } }) => {
+		try {
+			const order = await forwardOrderToSupplier({
+				orderId: input.id,
+				actorUserId: user.id,
+			});
+			return {
+				...order,
+				totalAmount: toNumberRequired(order.totalAmount),
+			};
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Failed to forward order";
 			if (message.includes("not found")) {
 				throw new ORPCError("NOT_FOUND", { message });
 			}

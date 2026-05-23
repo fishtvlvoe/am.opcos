@@ -4,7 +4,7 @@ import type { SendEmailHandler } from "../types";
 
 const TOSEND_API_URL = "https://api.tosend.com/v2/emails";
 
-export const send: SendEmailHandler = async ({ to, from, subject, html, text }) => {
+export const send: SendEmailHandler = async ({ to, from, subject, html, text, attachments }) => {
 	const apiKey = process.env.TOSEND_API_KEY?.trim();
 	const fromEmail = from ?? process.env.TOSEND_FROM_EMAIL?.trim();
 
@@ -25,6 +25,7 @@ export const send: SendEmailHandler = async ({ to, from, subject, html, text }) 
 			subject,
 			html,
 			text,
+			...(attachments && attachments.length > 0 ? { attachments } : {}),
 		}),
 	});
 

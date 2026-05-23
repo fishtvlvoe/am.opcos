@@ -1,3 +1,5 @@
+import { getAdminLineNotificationUid } from "@repo/database";
+
 export async function sendLineText(to: string, text: string): Promise<void> {
 	const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
 	if (!token) return;
@@ -23,7 +25,7 @@ export async function notifyAdminNewOrder(params: {
 	total: string;
 	shippingAddress: string;
 }): Promise<void> {
-	const adminUid = process.env.LINE_ADMIN_LINE_UID;
+	const adminUid = await getAdminLineNotificationUid();
 	if (!adminUid) return;
 
 	const message = `🛒 新訂單 #${params.orderId}\n客戶：${params.customerName}\n金額：NT$${params.total}\n配送：${params.shippingAddress}`;

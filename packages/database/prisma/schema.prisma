@@ -376,6 +376,11 @@ model AnismileOrder {
   shippingPhone   String              @default("") @map("shipping_phone") @db.VarChar(30)
   shippingAddress String              @default("") @map("shipping_address")
   notes           String?
+  confirmedAt     DateTime?           @map("confirmed_at")
+  confirmedById   String?             @map("confirmed_by_id")
+  supplierForwardedAt   DateTime?     @map("supplier_forwarded_at")
+  supplierForwardedById String?       @map("supplier_forwarded_by_id")
+  supplierForwardingError String?     @map("supplier_forwarding_error")
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
   user            User                @relation(fields: [userId], references: [id])
@@ -383,6 +388,7 @@ model AnismileOrder {
 
   @@index([userId])
   @@index([status])
+  @@index([supplierForwardedAt])
   @@map("anismile_orders")
 }
 
