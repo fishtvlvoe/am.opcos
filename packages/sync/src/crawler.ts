@@ -17,6 +17,11 @@ export type SyncResult = {
 	totalDiscovered: number;
 	batchOffset: number;
 	nextOffset: number;
+	prioritySynced: number;
+	priorityAdded: number;
+	priorityUpdated: number;
+	prioritySkipped: number;
+	priorityErrors: number;
 	syncLogId: string;
 };
 
@@ -40,6 +45,7 @@ export async function runSync(): Promise<SyncResult> {
 
 	try {
 		const batchSize = Math.min(parsePositiveInteger(process.env.ANISMILE_SYNC_BATCH_SIZE, 250), 500);
+		const priorityBatchSize = Math.min(parsePositiveInteger(process.env.ANISMILE_SYNC_PRIORITY_BATCH_SIZE, 120), 300);
 		const delayMs = Math.max(0, parsePositiveInteger(process.env.ANISMILE_SYNC_DELAY_MS, 100));
 		const concurrency = Math.min(parsePositiveInteger(process.env.ANISMILE_SYNC_CONCURRENCY, 4), 16);
 		const transactionTimeoutMs = Math.max(
@@ -49,6 +55,44 @@ export async function runSync(): Promise<SyncResult> {
 		const batchOffset = await getSyncCursor();
 		// 動態 import 避免 bundler 在 moduleResolution 模式下的 subpath 解析問題
 		const { crawlAnismileProductsWithStats } = await import("@repo/api/modules/anismile/lib/crawler");
+		// 先抓官網首頁/最新上架來源，確保新上架商品優先進 AM；全站 sitemap cursor 仍會接著慢慢補齊。
+		const priorityCrawlResult = await crawlAnismileProductsWithStats({
+			source: "homepage",
+			offset: 0,
+			limit: priorityBatchSize,
+			delayMs,
+			concurrency,
+		});
+		const priorityResult = await upsertProductsFromSync(
+			priorityCrawlResult.products.map((item) => ({
+				supplierId: item.supplierId,
+				sourceUrl: item.sourceUrl,
+				titleOriginal: item.titleOriginal,
+				titleTranslated: item.titleTranslated,
+				descriptionOriginal: item.descriptionOriginal,
+				descriptionTranslated: item.descriptionTranslated,
+				imageUrls: item.imageUrls,
+				category: item.category,
+				series: item.series,
+				originalPrice: item.originalPrice,
+				costPrice: item.costPrice,
+				listingDate: item.listingDate,
+				orderDeadline: item.orderDeadline,
+				inStock: item.inStock,
+				stockQuantity: item.stockQuantity,
+				lastSyncedAt: new Date(),
+				discountRate: item.discountRate,
+				brand: item.brand,
+				franchise: item.franchise,
+				janCode: item.janCode,
+				releaseDate: item.releaseDate,
+			})),
+			{
+				markMissingOutOfStock: false,
+				transactionTimeoutMs,
+			},
+		);
+
 		const crawlResult = await crawlAnismileProductsWithStats({
 			offset: batchOffset,
 			limit: batchSize,
@@ -90,14 +134,14 @@ export async function runSync(): Promise<SyncResult> {
 		await finishSyncLog({
 			id: syncLog.id,
 			status: "completed",
-			productsSynced: result.productsSynced,
-			productsAdded: result.productsAdded,
-			productsUpdated: result.productsUpdated,
-			productsSkipped: result.productsSkipped + crawlResult.productsSkipped,
-			productsFailed: crawlResult.productsFailed,
+			productsSynced: priorityResult.productsSynced + result.productsSynced,
+			productsAdded: priorityResult.productsAdded + result.productsAdded,
+			productsUpdated: priorityResult.productsUpdated + result.productsUpdated,
+			productsSkipped: result.productsSkipped + crawlResult.productsSkipped + priorityResult.productsSkipped + priorityCrawlResult.productsSkipped,
+			productsFailed: crawlResult.productsFailed + priorityCrawlResult.productsFailed,
 			errorMessage:
-				crawlResult.failureReasons.length > 0
-					? crawlResult.failureReasons.slice(0, 20).join("\n")
+				[...priorityCrawlResult.failureReasons, ...crawlResult.failureReasons].length > 0
+					? [...priorityCrawlResult.failureReasons, ...crawlResult.failureReasons].slice(0, 20).join("\n")
 					: undefined,
 		});
 
@@ -108,18 +152,23 @@ export async function runSync(): Promise<SyncResult> {
 		await setSyncCursor(nextOffset);
 
 		logger.info(
-			`[sync] completed batch offset=${batchOffset} next=${nextOffset}: ${result.productsSynced} products (${result.productsAdded} added, ${result.productsUpdated} updated, ${result.productsSkipped + crawlResult.productsSkipped} skipped, ${crawlResult.productsFailed} failed)`,
+			`[sync] completed priority=${priorityResult.productsSynced} and batch offset=${batchOffset} next=${nextOffset}: ${result.productsSynced} products (${result.productsAdded} added, ${result.productsUpdated} updated, ${result.productsSkipped + crawlResult.productsSkipped} skipped, ${crawlResult.productsFailed} failed)`,
 		);
 
 		return {
-			synced: result.productsSynced,
-			added: result.productsAdded,
-			updated: result.productsUpdated,
+			synced: priorityResult.productsSynced + result.productsSynced,
+			added: priorityResult.productsAdded + result.productsAdded,
+			updated: priorityResult.productsUpdated + result.productsUpdated,
 			skipped: result.productsSkipped + crawlResult.productsSkipped,
 			errors: crawlResult.productsFailed,
 			totalDiscovered: crawlResult.totalDiscovered,
 			batchOffset,
 			nextOffset,
+			prioritySynced: priorityResult.productsSynced,
+			priorityAdded: priorityResult.productsAdded,
+			priorityUpdated: priorityResult.productsUpdated,
+			prioritySkipped: priorityResult.productsSkipped + priorityCrawlResult.productsSkipped,
+			priorityErrors: priorityCrawlResult.productsFailed,
 			syncLogId: syncLog.id,
 		};
 	} catch (error) {
