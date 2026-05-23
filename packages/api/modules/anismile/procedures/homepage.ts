@@ -48,7 +48,8 @@ function normalizeSourceLinkUrl(url: string | undefined) {
 	const parsed = new URL(url);
 	const searchMatch = parsed.pathname.match(/^\/search\/(.+)\/?$/);
 	if (searchMatch?.[1]) {
-		return `/search?q=${encodeURIComponent(decodeURIComponent(searchMatch[1]))}`;
+		const query = decodeURIComponent(searchMatch[1]).replace(/[\/／]+$/g, "").trim();
+		return query ? `/search?q=${encodeURIComponent(query)}` : "/search";
 	}
 
 	return `${parsed.pathname}${parsed.search}`;

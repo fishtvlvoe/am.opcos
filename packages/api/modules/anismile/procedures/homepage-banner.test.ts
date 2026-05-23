@@ -18,4 +18,10 @@ describe("homepage getBanners source metadata contract", () => {
 		expect(source).toContain("copyrightColor");
 		expect(source).toContain("normalizeSourceLinkUrl(item.link)");
 	});
+
+	it("normalizes source search banner links without trailing slash in query", () => {
+		const source = read(filePath);
+		expect(source).toMatch(/replace\(\s*\/\[\\?\/／\]\+\$\/g,\s*""\s*\)/);
+		expect(source).toContain('return query ? `/search?q=${encodeURIComponent(query)}` : "/search"');
+	});
 });

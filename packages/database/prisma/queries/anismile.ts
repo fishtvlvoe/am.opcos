@@ -71,6 +71,10 @@ export function parseRecipientList(value: string | null | undefined) {
 		.filter(Boolean);
 }
 
+function normalizeProductSearchQuery(query: string) {
+	return query.trim().replace(/[\/／]+$/g, "").trim();
+}
+
 async function getSettingValue(key: string) {
 	const setting = await db.anismileSetting.findUnique({ where: { key } });
 	return setting?.value?.trim() || "";
@@ -231,11 +235,12 @@ export async function listAnismileProducts({
 
 	const andConditions: Prisma.AnismileProductWhereInput[] = [];
 
-	if (search) {
+	const normalizedSearch = search ? normalizeProductSearchQuery(search) : "";
+	if (normalizedSearch) {
 		andConditions.push({
 			OR: [
-				{ titleOriginal: { contains: search, mode: "insensitive" } },
-				{ titleTranslated: { contains: search, mode: "insensitive" } },
+				{ titleOriginal: { contains: normalizedSearch, mode: "insensitive" } },
+				{ titleTranslated: { contains: normalizedSearch, mode: "insensitive" } },
 			],
 		});
 	}
@@ -1197,7 +1202,8 @@ export async function searchAnismileProducts({
 	page?: number;
 	perPage?: number;
 }) {
-	const isJanCode = /^\d{8,14}$/.test(query.trim());
+	const normalizedQuery = normalizeProductSearchQuery(query);
+	const isJanCode = /^\d{8,14}$/.test(normalizedQuery);
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
 
@@ -1208,15 +1214,15 @@ export async function searchAnismileProducts({
 		...(filters?.franchise ? { franchise: filters.franchise } : {}),
 		...(filters?.brand ? { brand: filters.brand } : {}),
 		...(isJanCode
-			? { AND: [{ janCode: { contains: query.trim(), mode: "insensitive" as const } }] }
+			? { AND: [{ janCode: { contains: normalizedQuery, mode: "insensitive" as const } }] }
 			: {
 					AND: [
 						{
 							OR: [
-								{ titleOriginal: { contains: query, mode: "insensitive" as const } },
-								{ titleTranslated: { contains: query, mode: "insensitive" as const } },
-								{ franchise: { contains: query, mode: "insensitive" as const } },
-								{ brand: { contains: query, mode: "insensitive" as const } },
+								{ titleOriginal: { contains: normalizedQuery, mode: "insensitive" as const } },
+								{ titleTranslated: { contains: normalizedQuery, mode: "insensitive" as const } },
+								{ franchise: { contains: normalizedQuery, mode: "insensitive" as const } },
+								{ brand: { contains: normalizedQuery, mode: "insensitive" as const } },
 							],
 						},
 					],
