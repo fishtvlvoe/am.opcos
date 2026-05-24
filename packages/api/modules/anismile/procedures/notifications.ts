@@ -29,6 +29,7 @@ export const patchNotificationSettings = anismileAdminProcedure
 		z.object({
 			adminLineUid: z.string().max(100).default(""),
 			adminOrderEmails: z.string().max(2000).default(""),
+			adminOrderEmailsEnabled: z.boolean().default(true),
 			supplierOrderEmails: z.string().max(2000).default(""),
 		}),
 	)

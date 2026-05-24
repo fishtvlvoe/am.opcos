@@ -6,6 +6,7 @@ const DEFAULT_MARKUP_VALUE = "1.2";
 const SYNC_CURSOR_KEY = "sync.cursor";
 const ADMIN_LINE_UID_KEY = "notifications.adminLineUid";
 const ADMIN_ORDER_EMAILS_KEY = "notifications.adminOrderEmails";
+const ADMIN_ORDER_EMAILS_ENABLED_KEY = "notifications.adminOrderEmailsEnabled";
 const SUPPLIER_ORDER_EMAILS_KEY = "notifications.supplierOrderEmails";
 
 export const ORDER_STATUSES = ["pending", "confirmed", "shipped", "completed", "cancelled"] as const;
@@ -112,6 +113,10 @@ export async function getAdminLineNotificationUid() {
 }
 
 export async function getAdminOrderEmailRecipients() {
+	const enabled = await getSettingValue(ADMIN_ORDER_EMAILS_ENABLED_KEY);
+	if (enabled === "false" || enabled === "0") {
+		return [];
+	}
 	return parseRecipientList(
 		(await getSettingValue(ADMIN_ORDER_EMAILS_KEY)) || process.env.ANISMILE_ADMIN_ORDER_EMAILS,
 	);
@@ -127,6 +132,7 @@ export async function getOrderNotificationSettings() {
 	return {
 		adminLineUid: await getAdminLineUidSetting(),
 		adminOrderEmails: await getSettingValue(ADMIN_ORDER_EMAILS_KEY),
+		adminOrderEmailsEnabled: (await getSettingValue(ADMIN_ORDER_EMAILS_ENABLED_KEY)) !== "false",
 		supplierOrderEmails: await getSettingValue(SUPPLIER_ORDER_EMAILS_KEY),
 		hasLineToken: Boolean(process.env.LINE_CHANNEL_ACCESS_TOKEN?.trim()),
 		hasLineFallback: Boolean(process.env.LINE_ADMIN_LINE_UID?.trim()),
@@ -136,15 +142,18 @@ export async function getOrderNotificationSettings() {
 export async function updateOrderNotificationSettings({
 	adminLineUid,
 	adminOrderEmails,
+	adminOrderEmailsEnabled,
 	supplierOrderEmails,
 }: {
 	adminLineUid: string;
 	adminOrderEmails: string;
+	adminOrderEmailsEnabled: boolean;
 	supplierOrderEmails: string;
 }) {
 	await Promise.all([
 		setSettingValue(ADMIN_LINE_UID_KEY, adminLineUid.trim()),
 		setSettingValue(ADMIN_ORDER_EMAILS_KEY, adminOrderEmails.trim()),
+		setSettingValue(ADMIN_ORDER_EMAILS_ENABLED_KEY, adminOrderEmailsEnabled ? "true" : "false"),
 		setSettingValue(SUPPLIER_ORDER_EMAILS_KEY, supplierOrderEmails.trim()),
 	]);
 	return await getOrderNotificationSettings();
@@ -796,12 +805,16 @@ export async function createOrderFromCart({
 	shippingPhone,
 	shippingAddress,
 	notes,
+	paymentMethod = "bank_transfer",
+	paymentStatus = "pending",
 }: {
 	userId: string;
 	shippingName: string;
 	shippingPhone: string;
 	shippingAddress: string;
 	notes?: string;
+	paymentMethod?: "bank_transfer" | "stripe";
+	paymentStatus?: "pending" | "paid";
 }) {
 	const tierSettings = await getTierSettingsValues();
 
@@ -843,6 +856,8 @@ export async function createOrderFromCart({
 		const order = await tx.anismileOrder.create({
 			data: {
 				userId,
+				paymentMethod,
+				paymentStatus,
 				totalAmount,
 				shippingName,
 				shippingPhone,
@@ -874,6 +889,35 @@ export async function createOrderFromCart({
 		});
 
 		return order;
+	});
+}
+
+export async function attachStripeSessionToOrder({
+	orderId,
+	stripeSessionId,
+}: {
+	orderId: string;
+	stripeSessionId: string;
+}) {
+	return await db.anismileOrder.update({
+		where: { id: orderId },
+		data: { stripeSessionId },
+	});
+}
+
+export async function markOrderPaidByStripeSession(stripeSessionId: string) {
+	const order = await db.anismileOrder.findFirst({
+		where: { stripeSessionId },
+	});
+	if (!order) return null;
+	if (order.paymentStatus === "paid") return order;
+	return await db.anismileOrder.update({
+		where: { id: order.id },
+		data: {
+			paymentStatus: "paid",
+			status: order.status === "pending" ? "confirmed" : order.status,
+			confirmedAt: order.confirmedAt ?? new Date(),
+		},
 	});
 }
 
@@ -925,6 +969,7 @@ export async function listOrders({
 								titleTranslated: true,
 								titleOriginal: true,
 								supplierId: true,
+								imageUrls: true,
 							},
 						},
 					},
@@ -1005,7 +1050,139 @@ export async function getOrderById(id: string) {
 					product: true,
 				},
 			},
+			children: {
+				orderBy: {
+					splitSuffix: "asc",
+				},
+				include: {
+					items: {
+						include: {
+							product: true,
+						},
+					},
+				},
+			},
 		},
+	});
+}
+
+export async function listChildOrders(orderId: string) {
+	return await db.anismileOrder.findMany({
+		where: { parentId: orderId },
+		orderBy: { splitSuffix: "asc" },
+		include: {
+			items: {
+				include: {
+					product: true,
+				},
+			},
+		},
+	});
+}
+
+export async function splitOrder({
+	orderId,
+	items,
+}: {
+	orderId: string;
+	items: Array<{ itemId: string; quantity: number }>;
+}) {
+	if (items.length === 0) {
+		throw new Error("至少要選擇一個品項");
+	}
+
+	return await db.$transaction(async (tx) => {
+		const parent = await tx.anismileOrder.findUnique({
+			where: { id: orderId },
+			include: {
+				items: true,
+				children: {
+					select: {
+						splitSuffix: true,
+					},
+				},
+			},
+		});
+
+		if (!parent) throw new Error("Order not found");
+		if (parent.orderType !== "standard") throw new Error("僅可拆分父訂單");
+
+		const selectedMap = new Map(items.map((item) => [item.itemId, item.quantity]));
+		const parentItemsMap = new Map(parent.items.map((item) => [item.id, item]));
+
+		for (const input of items) {
+			const parentItem = parentItemsMap.get(input.itemId);
+			if (!parentItem) throw new Error("包含不存在的品項");
+			if (!Number.isInteger(input.quantity) || input.quantity <= 0) {
+				throw new Error("拆分數量必須大於 0");
+			}
+			const available = parentItem.quantity - parentItem.allocatedQty;
+			if (input.quantity > available) {
+				throw new Error("分配數量超過可用量");
+			}
+		}
+
+		const splitSuffix =
+			Math.max(0, ...parent.children.map((child) => child.splitSuffix ?? 0)) + 1;
+
+		const childItems = parent.items
+			.filter((item) => selectedMap.has(item.id))
+			.map((item) => {
+				const quantity = selectedMap.get(item.id) ?? 0;
+				return {
+					productId: item.productId,
+					quantity,
+					unitPrice: item.unitPrice,
+					costPrice: item.costPrice,
+					tierDiscountRate: item.tierDiscountRate,
+					itemStatus: "pending",
+				};
+			});
+
+		const childTotal = childItems.reduce(
+			(sum, item) => sum.plus(item.unitPrice.mul(item.quantity)),
+			new Prisma.Decimal(0),
+		);
+
+		const childOrder = await tx.anismileOrder.create({
+			data: {
+				userId: parent.userId,
+				parentId: parent.id,
+				orderType: "split",
+				splitSuffix,
+				status: "pending",
+				paymentMethod: parent.paymentMethod,
+				paymentStatus: parent.paymentStatus,
+				totalAmount: childTotal,
+				shippingName: parent.shippingName,
+				shippingPhone: parent.shippingPhone,
+				shippingAddress: parent.shippingAddress,
+				notes: parent.notes,
+				items: {
+					create: childItems,
+				},
+			},
+			include: {
+				items: {
+					include: {
+						product: true,
+					},
+				},
+			},
+		});
+
+		for (const input of items) {
+			await tx.anismileOrderItem.update({
+				where: { id: input.itemId },
+				data: {
+					allocatedQty: {
+						increment: input.quantity,
+					},
+				},
+			});
+		}
+
+		return childOrder;
 	});
 }
 

@@ -1,7 +1,9 @@
 import { ORPCError } from "@orpc/server";
 import {
 	addToCart,
+	createOrderFromCart,
 	db,
+	getOrderById,
 	getTierSettingsValues,
 	listCartItems,
 	removeCartItem,
@@ -289,90 +291,25 @@ export const checkoutCart = protectedProcedure
 	)
 	.handler(async ({ input, context: { user } }) => {
 		try {
-			const tierSettings = await getTierSettingsValues();
 			await refreshUserCartProducts(user.id);
 			await pruneUnavailableCartItems(user.id);
+			const paymentMethod = "bank_transfer";
 
-			// 取得用戶等級折扣
-			const userRecord = await db.user.findUnique({
-				where: { id: user.id },
-				select: { anismileTier: true },
+			const order = await createOrderFromCart({
+				userId: user.id,
+				shippingName: input.shippingName,
+				shippingPhone: input.shippingPhone,
+				shippingAddress: input.shippingAddress,
+				notes: input.note,
+				paymentMethod,
+				paymentStatus: "pending",
 			});
-			const tier = userRecord?.anismileTier ?? "NORMAL";
-			const tierDiscount =
-				tier === "VIP"
-					? tierSettings.vipDiscount
-					: tier === "WHOLESALE"
-						? tierSettings.wholesaleDiscount
-						: 0;
 
-			// Inline transaction 建單（含等級折扣計算）
-			const order = await db.$transaction(async (tx) => {
-				const cartItems = await tx.anismileCartItem.findMany({
-					where: { userId: user.id },
-					include: { product: true },
-				});
-
-				if (cartItems.length === 0) {
-					throw new Error("購物車是空的");
-				}
-				const unavailableItem = cartItems.find((item) => getCartProductUnavailableReason(item.product));
-				if (unavailableItem) {
-					throw new Error(getCartProductUnavailableReason(unavailableItem.product) ?? "購物車包含無法下單的商品");
-				}
-
-				// 計算每個品項的單價（有 markupOverride 不套用等級折扣）
-				// Prisma Decimal.mul() 接受 number，不需要 new Prisma.Decimal()
-				const orderItems = cartItems.map((item) => {
-					const unitPrice =
-						item.product.markupOverride !== null
-							? item.product.sellingPrice
-							: item.product.sellingPrice.mul(1 - tierDiscount);
-					return {
-						productId: item.productId,
-						quantity: item.quantity,
-						unitPrice,
-						costPrice: item.product.costPrice,
-						tierDiscountRate: tierDiscount,
-					};
-				});
-
-				// 加總：先轉成 number 計算，最後轉回 string 給 Prisma（避免 Decimal 初始值問題）
-				const totalAmountNum = orderItems.reduce(
-					(sum, item) => sum + item.unitPrice.toNumber() * item.quantity,
-					0,
-				);
-				const totalAmount = totalAmountNum.toString();
-
-				const created = await tx.anismileOrder.create({
-					data: {
-						userId: user.id,
-						totalAmount,
-						shippingName: input.shippingName,
-						shippingPhone: input.shippingPhone,
-						shippingAddress: input.shippingAddress,
-						notes: input.note,
-						items: { create: orderItems },
-					},
-					select: { id: true, totalAmount: true },
-				});
-
-				// 清空購物車
-				await tx.anismileCartItem.deleteMany({ where: { userId: user.id } });
-
-				return {
-					...created,
-					_emailItems: orderItems.map((oi) => {
-						const cartItem = cartItems.find((ci) => ci.productId === oi.productId)!;
-						return {
-							titleTranslated:
-								cartItem.product.titleTranslated ?? cartItem.product.titleOriginal,
-							quantity: oi.quantity,
-							unitPrice: oi.unitPrice.toNumber(),
-						};
-					}),
-				};
-			});
+			const emailItems = order.items.map((item) => ({
+				titleTranslated: item.product.titleTranslated ?? item.product.titleOriginal,
+				quantity: item.quantity,
+				unitPrice: Number(item.unitPrice),
+			}));
 
 			void sendEmail({
 				to: user.email,
@@ -380,7 +317,7 @@ export const checkoutCart = protectedProcedure
 				context: {
 					orderId: order.id,
 					customerName: user.name ?? user.email,
-					items: order._emailItems,
+					items: emailItems,
 					totalAmount: Number(order.totalAmount),
 					notes: input.note ?? null,
 				},
@@ -392,13 +329,35 @@ export const checkoutCart = protectedProcedure
 				total: String(Math.round(Number(order.totalAmount ?? 0))),
 				shippingAddress: input.shippingAddress,
 			}).catch((err) => console.error("[LINE] notify failed:", err));
-
 			return { orderId: order.id };
 		} catch (error) {
 			throw new ORPCError("BAD_REQUEST", {
 				message: error instanceof Error ? error.message : "Checkout failed",
 			});
 		}
+	});
+
+export const createCheckoutStripeSession = protectedProcedure
+	.route({
+		method: "POST",
+		path: "/anismile/cart/checkout/stripe",
+		tags: ["Anismile"],
+		summary: "Create Stripe checkout session for pending order",
+	})
+	.input(
+		z.object({
+			orderId: z.string().min(1),
+		}),
+	)
+	.handler(async ({ input, context: { user } }) => {
+		const order = await getOrderById(input.orderId);
+		if (!order) {
+			throw new ORPCError("NOT_FOUND", { message: "Order not found" });
+		}
+		if (order.userId !== user.id) {
+			throw new ORPCError("FORBIDDEN", { message: "無權限" });
+		}
+		throw new ORPCError("BAD_REQUEST", { message: "信用卡付款功能暫停中" });
 	});
 
 export const deleteCartItem = removeCartItemProcedure;

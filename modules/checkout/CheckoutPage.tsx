@@ -13,6 +13,7 @@ type Address = {
 	name: string;
 	phone: string;
 	address: string;
+	idNumber: string | null;
 	isDefault: boolean;
 };
 
@@ -44,6 +45,10 @@ export function CheckoutPage() {
 	const cartItems = cartQuery.data?.items ?? [];
 	const cartTotal = useMemo(() => Number(cartQuery.data?.total ?? 0), [cartQuery.data]);
 	const itemCount = useMemo(() => cartItems.reduce((sum, item) => sum + item.quantity, 0), [cartItems]);
+	const selectedAddress =
+		selectedAddressId !== "new"
+			? addresses.find((address) => address.id === selectedAddressId)
+			: null;
 
 	useEffect(() => {
 		if (cartQuery.isSuccess && cartItems.length === 0 && !orderPlaced) {
@@ -53,11 +58,11 @@ export function CheckoutPage() {
 
 	const checkoutMutation = useMutation(
 		orpc.anismile.cart.checkout.mutationOptions({
-			onSuccess: ({ orderId }) => {
+			onSuccess: ({ orderId }: { orderId: string }) => {
 				setOrderPlaced(true);
-				toastSuccess("訂單已建立");
 				void queryClient.invalidateQueries({ queryKey: orpc.anismile.cart.getItems.key() });
 				void queryClient.invalidateQueries({ queryKey: orpc.anismile.orders.list.key() });
+				toastSuccess("訂單已建立");
 				router.push(`/orders/${orderId}/confirmation`);
 			},
 			onError: (error) => toastError(error.message || "送出訂單失敗"),
@@ -150,6 +155,11 @@ export function CheckoutPage() {
 							</label>
 						</div>
 					)}
+					{selectedAddress?.idNumber ? (
+						<div className="rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm text-stone-700">
+							身份證號：{selectedAddress.idNumber}
+						</div>
+					) : null}
 
 					{(selectedAddressId === "new" || addresses.length === 0) && (
 						<div className="space-y-3">
@@ -223,6 +233,9 @@ export function CheckoutPage() {
 							value={notes}
 							onChange={(e) => setNotes(e.target.value)}
 						/>
+					</div>
+					<div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+						目前採人工付款審核，下單後由管理員確認款項並安排出貨。
 					</div>
 				</section>
 			</div>

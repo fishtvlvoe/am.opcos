@@ -20,6 +20,7 @@ export function AdminSettingsPage() {
 	const [vipThreshold, setVipThreshold] = useState("10000000");
 	const [adminLineUid, setAdminLineUid] = useState("");
 	const [adminOrderEmails, setAdminOrderEmails] = useState("");
+	const [adminOrderEmailsEnabled, setAdminOrderEmailsEnabled] = useState(true);
 	const [supplierOrderEmails, setSupplierOrderEmails] = useState("");
 
 	const defaultMarkupQuery = useQuery(orpc.anismile.settings.getDefaultMarkup.queryOptions({ input: {} }));
@@ -40,6 +41,7 @@ export function AdminSettingsPage() {
 		if (notificationSettingsQuery.data) {
 			setAdminLineUid(notificationSettingsQuery.data.adminLineUid ?? "");
 			setAdminOrderEmails(notificationSettingsQuery.data.adminOrderEmails ?? "");
+			setAdminOrderEmailsEnabled(notificationSettingsQuery.data.adminOrderEmailsEnabled ?? true);
 			setSupplierOrderEmails(notificationSettingsQuery.data.supplierOrderEmails ?? "");
 		}
 	}, [notificationSettingsQuery.data]);
@@ -230,6 +232,14 @@ export function AdminSettingsPage() {
 							<p className="text-xs text-stone-400">可用逗號分隔多個收件者。</p>
 						</div>
 					</div>
+					<label className="flex items-center gap-2 text-sm text-stone-700">
+						<input
+							type="checkbox"
+							checked={adminOrderEmailsEnabled}
+							onChange={(e) => setAdminOrderEmailsEnabled(e.target.checked)}
+						/>
+						啟用管理者每日摘要 Email 通知
+					</label>
 					<div className="space-y-1">
 						<label className="text-sm font-medium text-stone-700">供應商訂單 Email</label>
 						<Input
@@ -245,6 +255,7 @@ export function AdminSettingsPage() {
 								notificationMutation.mutate({
 									adminLineUid,
 									adminOrderEmails,
+									adminOrderEmailsEnabled,
 									supplierOrderEmails,
 								})
 							}
