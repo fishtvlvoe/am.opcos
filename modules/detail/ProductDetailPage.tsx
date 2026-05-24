@@ -128,19 +128,6 @@ export function ProductDetailPage({ id }: { id: string }) {
 
 	const attributeRows = [
 		{ label: "來源 ID", value: product.supplierId },
-		{
-			label: "來源頁",
-			value: product.sourceUrl ? (
-				<a
-					href={product.sourceUrl}
-					target="_blank"
-					rel="noreferrer"
-					className="text-primary hover:underline"
-				>
-					anismile.jp
-				</a>
-			) : null,
-		},
 		{ label: "JAN Code", value: product.janCode },
 		{ label: "品牌", value: product.brand },
 		{ label: "作品", value: product.franchise },
