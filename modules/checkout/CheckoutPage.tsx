@@ -30,7 +30,7 @@ export function CheckoutPage() {
 	const [orderPlaced, setOrderPlaced] = useState(false);
 
 	const addressesQuery = useQuery(orpc.anismile.addresses.list.queryOptions({ input: {} }));
-	const addresses = (addressesQuery.data ?? []) as Address[];
+	const addresses = useMemo(() => (addressesQuery.data ?? []) as Address[], [addressesQuery.data]);
 
 	useEffect(() => {
 		if (addressesQuery.isSuccess && addresses.length > 0) {
@@ -39,12 +39,13 @@ export function CheckoutPage() {
 				setSelectedAddressId(defaultAddr.id);
 			}
 		}
-	}, [addressesQuery.isSuccess]);
+	}, [addressesQuery.isSuccess, addresses]);
 
 	const cartQuery = useQuery(orpc.anismile.cart.getItems.queryOptions({ input: {} }));
 	const cartItems = cartQuery.data?.items ?? [];
 	const cartTotal = useMemo(() => Number(cartQuery.data?.total ?? 0), [cartQuery.data]);
 	const itemCount = useMemo(() => cartItems.reduce((sum, item) => sum + item.quantity, 0), [cartItems]);
+	const hasUnavailableItems = cartItems.some((item) => Boolean(item.unavailableReason));
 	const selectedAddress =
 		selectedAddressId !== "new"
 			? addresses.find((address) => address.id === selectedAddressId)
@@ -88,6 +89,10 @@ export function CheckoutPage() {
 	}
 
 	function handleSubmit() {
+		if (hasUnavailableItems) {
+			toastError("購物車含有無法下單商品，請先返回購物車調整");
+			return;
+		}
 		if (!validate()) return;
 		let name = shippingName.trim();
 		let phone = shippingPhone.trim();
@@ -244,12 +249,17 @@ export function CheckoutPage() {
 				<h2 className="font-semibold text-lg text-stone-900">訂單摘要</h2>
 				<div className="space-y-2 text-sm">
 					{cartItems.map((item) => (
-						<div key={item.id} className="flex items-center justify-between">
-							<span className="line-clamp-1 max-w-[160px] text-stone-600">
-								{item.product.titleTranslated || item.product.titleOriginal}
-								<span className="ml-1 text-stone-500">×{item.quantity}</span>
-							</span>
-							<span className="font-medium text-stone-900">¥ {Number(item.lineTotal).toFixed(2)}</span>
+						<div key={item.id} className="space-y-1">
+							<div className="flex items-center justify-between">
+								<span className="line-clamp-1 max-w-[160px] text-stone-600">
+									{item.product.titleTranslated || item.product.titleOriginal}
+									<span className="ml-1 text-stone-500">×{item.quantity}</span>
+								</span>
+								<span className="font-medium text-stone-900">¥ {Number(item.lineTotal).toFixed(2)}</span>
+							</div>
+							{item.unavailableReason ? (
+								<p className="text-xs text-red-600">{item.unavailableReason}</p>
+							) : null}
 						</div>
 					))}
 					<div className="flex items-center justify-between">
@@ -268,7 +278,7 @@ export function CheckoutPage() {
 
 				<Button
 					className="w-full"
-					disabled={checkoutMutation.isPending || cartItems.length === 0}
+					disabled={checkoutMutation.isPending || cartItems.length === 0 || hasUnavailableItems}
 					onClick={handleSubmit}
 				>
 					{checkoutMutation.isPending ? "送出中..." : "確認下單"}

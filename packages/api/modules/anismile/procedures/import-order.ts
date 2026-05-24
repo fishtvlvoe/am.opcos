@@ -4,6 +4,12 @@ import { z } from "zod";
 
 import { protectedProcedure } from "../../../orpc/procedures";
 
+function getProductUnavailableReason(product: { inStock: boolean; orderDeadline: Date | null }) {
+	if (!product.inStock) return "商品已下架或無法下單";
+	if (product.orderDeadline && product.orderDeadline.getTime() < Date.now()) return "商品已超過截單日";
+	return null;
+}
+
 // 依 JAN code 比對商品
 export const matchProducts = protectedProcedure
 	.route({
@@ -88,7 +94,14 @@ export const confirmImportOrder = protectedProcedure
 		const productIds = input.items.map((i) => i.productId);
 		const products = await db.anismileProduct.findMany({
 			where: { id: { in: productIds } },
-			select: { id: true, sellingPrice: true, costPrice: true, markupOverride: true },
+			select: {
+				id: true,
+				sellingPrice: true,
+				costPrice: true,
+				markupOverride: true,
+				inStock: true,
+				orderDeadline: true,
+			},
 		});
 
 		if (products.length !== productIds.length) {
@@ -96,6 +109,12 @@ export const confirmImportOrder = protectedProcedure
 		}
 
 		const productMap = new Map(products.map((p) => [p.id, p]));
+		const unavailableProduct = products.find((product) => getProductUnavailableReason(product) !== null);
+		if (unavailableProduct) {
+			throw new ORPCError("BAD_REQUEST", {
+				message: getProductUnavailableReason(unavailableProduct) ?? "商品目前無法下單",
+			});
+		}
 
 		const order = await db.$transaction(async (tx) => {
 			// 計算每個品項的單價（有 markupOverride 不套用等級折扣）

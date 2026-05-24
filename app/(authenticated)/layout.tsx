@@ -13,7 +13,8 @@ export const revalidate = 0;
 
 export default async function AuthenticatedLayout({ children }: PropsWithChildren) {
 	const session = await getSession();
-	const bypassAuthForVisualTest = process.env.ANISMILE_VISUAL_TEST_BYPASS_AUTH === "1";
+	const bypassAuthForVisualTest =
+		process.env.NODE_ENV !== "production" && process.env.ANISMILE_VISUAL_TEST_BYPASS_AUTH === "1";
 	if (!session && !bypassAuthForVisualTest) {
 		redirect("/login");
 	}

@@ -60,13 +60,14 @@ export function AdminOrdersPage() {
 		}),
 	);
 
-	const exportQuery = useQuery(
-		orpc.anismile.orders.export.queryOptions({
+	const exportQuery = useQuery({
+		...orpc.anismile.orders.export.queryOptions({
 			input: {
 				status: statusFilter,
 			},
 		}),
-	);
+		enabled: false,
+	});
 	const splitOrderQuery = useQuery({
 		...orpc.anismile.orders.getById.queryOptions({
 			input: splitOrderId ? { id: splitOrderId } : { id: "" },
@@ -104,8 +105,8 @@ export function AdminOrdersPage() {
 		[splitOrderItems],
 	);
 
-	const downloadCsv = () => {
-		const data = exportQuery.data;
+	const downloadCsv = async () => {
+		const data = exportQuery.data ?? (await exportQuery.refetch()).data;
 		if (!data) {
 			return;
 		}
@@ -157,8 +158,8 @@ export function AdminOrdersPage() {
 						<option value="completed">已完成</option>
 						<option value="cancelled">已取消</option>
 					</select>
-					<Button variant="outline" onClick={downloadCsv} disabled={!exportQuery.data}>
-						匯出 CSV
+					<Button variant="outline" onClick={downloadCsv} disabled={exportQuery.isFetching}>
+						{exportQuery.isFetching ? "匯出中..." : "匯出 CSV"}
 					</Button>
 				</div>
 			</div>
@@ -220,7 +221,7 @@ export function AdminOrdersPage() {
 								<div className="flex flex-wrap items-center gap-2">
 									<select
 										className="rounded-md border bg-card px-2 py-1 text-sm"
-										defaultValue={row.status}
+										value={row.status}
 										onChange={(event) =>
 											updateMutation.mutate({
 												id: row.id,

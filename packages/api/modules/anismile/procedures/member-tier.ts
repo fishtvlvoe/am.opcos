@@ -2,7 +2,7 @@ import { ORPCError } from "@orpc/server";
 import { db } from "@repo/database";
 import { z } from "zod";
 
-import { protectedProcedure } from "../../../orpc/procedures";
+import { anismileAdminProcedure, protectedProcedure } from "../../../orpc/procedures";
 
 const TIER_SETTING_KEYS = [
 	"tier_wholesale_discount",
@@ -94,7 +94,7 @@ export const getMyTier = protectedProcedure
 		};
 	});
 
-export const adminUpdateTier = protectedProcedure
+export const adminUpdateTier = anismileAdminProcedure
 	.route({
 		method: "PATCH",
 		path: "/anismile/member-tier/{userId}",
@@ -108,9 +108,6 @@ export const adminUpdateTier = protectedProcedure
 		}),
 	)
 	.handler(async ({ input, context: { user } }) => {
-		if (user.role !== "admin" && user.role !== "super_admin") {
-			throw new ORPCError("FORBIDDEN", { message: "無管理員權限" });
-		}
 		if (user.role === "admin" && input.tier === "VIP") {
 			throw new ORPCError("FORBIDDEN", { message: "管理員無法設定 VIP 等級" });
 		}

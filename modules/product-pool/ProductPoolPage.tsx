@@ -9,6 +9,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useState } from "react";
 
 type PoolStatus = "all" | "pending" | "shipped" | "completed" | "cancelled";
+type ItemStatus = "pending" | "confirmed" | "shipped" | "completed" | "cancelled";
 
 const TABS: { value: PoolStatus; label: string }[] = [
 	{ value: "all", label: "全部" },
@@ -33,7 +34,7 @@ export function ProductPoolPage() {
 	const [search, setSearch] = useState("");
 	const [page, setPage] = useState(1);
 	const [selectedIds, setSelectedIds] = useState<string[]>([]);
-	const [batchStatus, setBatchStatus] = useState("shipped");
+	const [batchStatus, setBatchStatus] = useState<ItemStatus>("shipped");
 	const queryClient = useQueryClient();
 	const { user } = useSession();
 	const isAdmin = user?.role === "admin" || user?.role === "super_admin";
@@ -92,7 +93,7 @@ export function ProductPoolPage() {
 					<div className="flex items-center gap-2">
 						<select
 							value={batchStatus}
-							onChange={(e) => setBatchStatus(e.target.value)}
+							onChange={(e) => setBatchStatus(e.target.value as ItemStatus)}
 							className="h-9 rounded-md border border-border bg-background px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
 						>
 							<option value="pending">待發貨</option>

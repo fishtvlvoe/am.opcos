@@ -173,7 +173,7 @@ export function OrderTable({
 										<div className="flex items-center gap-2">
 											<select
 												className="rounded-md border border-stone-300 px-2 py-1 text-xs"
-												defaultValue={row.status}
+												value={row.status}
 												onChange={(event) => onUpdateStatus(row.id, event.target.value as OrderStatus)}
 											>
 												{statuses

@@ -1,8 +1,7 @@
-import { ORPCError } from "@orpc/server";
 import { db } from "@repo/database";
 import { z } from "zod";
 
-import { protectedProcedure } from "../../../orpc/procedures";
+import { anismileAdminProcedure, protectedProcedure } from "../../../orpc/procedures";
 
 const PAGE_SIZE = 20;
 
@@ -13,6 +12,7 @@ const STATUS_MAP: Record<string, string[]> = {
 	completed: ["completed"],
 	cancelled: ["cancelled"],
 };
+const itemStatusSchema = z.enum(["pending", "confirmed", "shipped", "completed", "cancelled"]);
 
 // 列出用戶的商品池（訂單品項彙整）
 export const listProductPool = protectedProcedure
@@ -84,7 +84,7 @@ export const listProductPool = protectedProcedure
 	});
 
 // 管理員批量更新品項狀態
-export const adminBatchUpdateItemStatus = protectedProcedure
+export const adminBatchUpdateItemStatus = anismileAdminProcedure
 	.route({
 		method: "PATCH",
 		path: "/anismile/product-pool/batch-status",
@@ -94,15 +94,10 @@ export const adminBatchUpdateItemStatus = protectedProcedure
 	.input(
 		z.object({
 			itemIds: z.array(z.string().min(1)).min(1).max(200),
-			status: z.string().min(1),
+			status: itemStatusSchema,
 		}),
 	)
-	.handler(async ({ input, context: { user } }) => {
-		// 只有 admin / super_admin 可以批量修改
-		if (user.role !== "admin" && user.role !== "super_admin") {
-			throw new ORPCError("FORBIDDEN", { message: "無管理員權限" });
-		}
-
+	.handler(async ({ input }) => {
 		const result = await db.anismileOrderItem.updateMany({
 			where: { id: { in: input.itemIds } },
 			data: { itemStatus: input.status },

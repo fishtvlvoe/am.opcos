@@ -8,6 +8,10 @@ import { useRef, useState } from "react";
 
 const MAX_ROWS = 500;
 
+function isValidQuantity(value: number) {
+	return Number.isInteger(value) && value > 0 && value <= 9999;
+}
+
 // 手動解析 CSV（避免新依賴）
 function parseCsv(text: string): Array<{ jancode: string; quantity: number }> {
 	const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
@@ -121,6 +125,11 @@ export function ImportOrderPage() {
 				toastError("CSV 內無有效資料");
 				return;
 			}
+			const invalidRowIndex = parsed.findIndex((row) => !isValidQuantity(row.quantity));
+			if (invalidRowIndex >= 0) {
+				toastError(`第 ${invalidRowIndex + 1} 筆數量無效，請輸入 1 到 9999 的整數`);
+				return;
+			}
 			setCsvRows(parsed);
 			matchMutation.mutate({ jancodes: parsed.map((r) => r.jancode) });
 		};
@@ -145,11 +154,16 @@ export function ImportOrderPage() {
 
 	const canSubmit =
 		matchedItems.length > 0 &&
+		matchedItems.every((item) => isValidQuantity(item.quantity)) &&
 		shipping.name.trim() !== "" &&
 		shipping.phone.trim() !== "" &&
 		shipping.address.trim() !== "";
 
 	const handleConfirm = () => {
+		if (!matchedItems.every((item) => isValidQuantity(item.quantity))) {
+			toastError("商品數量需為 1 到 9999 的整數");
+			return;
+		}
 		confirmMutation.mutate({
 			items: matchedItems.map((i) => ({
 				productId: i.productId,

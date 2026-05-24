@@ -1,5 +1,6 @@
 "use client";
 
+import { useSession } from "@auth/hooks/use-session";
 import { Button, Card, CardContent, CardHeader, CardTitle, Input, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, toastError, toastSuccess } from "@repo/ui";
 import { orpc } from "@shared/lib/orpc-query-utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -8,7 +9,9 @@ import { useEffect, useState } from "react";
 const roleOptions = ["customer", "admin", "super_admin"] as const;
 
 export function AdminSettingsPage() {
+	const { user } = useSession();
 	const queryClient = useQueryClient();
+	const isSuperAdmin = user?.role === "super_admin";
 	const [markup, setMarkup] = useState("1.2");
 
 	// 批發折扣率（% 輸入，如 3 → 存 0.03）
@@ -25,8 +28,17 @@ export function AdminSettingsPage() {
 
 	const defaultMarkupQuery = useQuery(orpc.anismile.settings.getDefaultMarkup.queryOptions({ input: {} }));
 	const tierSettingsQuery = useQuery(orpc.anismile.settings.getTierSettings.queryOptions({ input: {} }));
-	const usersQuery = useQuery(orpc.anismile.users.listRoles.queryOptions({ input: {} }));
+	const usersQuery = useQuery({
+		...orpc.anismile.users.listRoles.queryOptions({ input: {} }),
+		enabled: isSuperAdmin,
+	});
 	const notificationSettingsQuery = useQuery(orpc.anismile.notifications.getSettings.queryOptions({ input: {} }));
+
+	useEffect(() => {
+		if (defaultMarkupQuery.data?.value !== undefined) {
+			setMarkup(String(defaultMarkupQuery.data.value));
+		}
+	}, [defaultMarkupQuery.data?.value]);
 
 	useEffect(() => {
 		if (tierSettingsQuery.data) {
@@ -117,29 +129,31 @@ export function AdminSettingsPage() {
 
 	return (
 		<div className="space-y-6">
-			<Card>
-				<CardHeader>
-					<CardTitle>預設利潤率</CardTitle>
-				</CardHeader>
-				<CardContent className="space-y-3">
-					<p className="text-sm text-muted-foreground">
-						目前值：{defaultMarkupQuery.data?.value?.toString() ?? "載入中..."}
-					</p>
-					<div className="flex gap-2">
-						<Input value={markup} onChange={(event) => setMarkup(event.target.value)} placeholder="例如 1.2" />
-						<Button
-							onClick={() =>
-								markupMutation.mutate({
-									markup: Number.parseFloat(markup),
-								})
-							}
-							disabled={markupMutation.isPending}
-						>
-							更新
-						</Button>
-					</div>
-				</CardContent>
-			</Card>
+			{isSuperAdmin ? (
+				<Card>
+					<CardHeader>
+						<CardTitle>預設利潤率</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-3">
+						<p className="text-sm text-muted-foreground">
+							目前值：{defaultMarkupQuery.data?.value?.toString() ?? "載入中..."}
+						</p>
+						<div className="flex gap-2">
+							<Input value={markup} onChange={(event) => setMarkup(event.target.value)} placeholder="例如 1.2" />
+							<Button
+								onClick={() =>
+									markupMutation.mutate({
+										markup: Number.parseFloat(markup),
+									})
+								}
+								disabled={markupMutation.isPending}
+							>
+								更新
+							</Button>
+						</div>
+					</CardContent>
+				</Card>
+			) : null}
 
 			<Card>
 				<CardHeader>
@@ -238,7 +252,7 @@ export function AdminSettingsPage() {
 							checked={adminOrderEmailsEnabled}
 							onChange={(e) => setAdminOrderEmailsEnabled(e.target.checked)}
 						/>
-						啟用管理者每日摘要 Email 通知
+						啟用每日摘要 Email 通知
 					</label>
 					<div className="space-y-1">
 						<label className="text-sm font-medium text-stone-700">供應商訂單 Email</label>
@@ -274,48 +288,50 @@ export function AdminSettingsPage() {
 				</CardContent>
 			</Card>
 
-			<Card>
-				<CardHeader>
-					<CardTitle>用戶角色管理</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>姓名</TableHead>
-								<TableHead>Email</TableHead>
-								<TableHead>角色</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{(usersQuery.data ?? []).map((user) => (
-								<TableRow key={user.id}>
-									<TableCell>{user.name}</TableCell>
-									<TableCell>{user.email}</TableCell>
-									<TableCell>
-										<select
-											className="rounded-md border bg-card px-2 py-1 text-sm"
-											defaultValue={user.role ?? "customer"}
-											onChange={(event) =>
-												roleMutation.mutate({
-													id: user.id,
-													role: event.target.value as (typeof roleOptions)[number],
-												})
-											}
-										>
-											{roleOptions.map((role) => (
-												<option key={role} value={role}>
-													{role}
-												</option>
-											))}
-										</select>
-									</TableCell>
+			{isSuperAdmin ? (
+				<Card>
+					<CardHeader>
+						<CardTitle>用戶角色管理</CardTitle>
+					</CardHeader>
+					<CardContent>
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead>姓名</TableHead>
+									<TableHead>Email</TableHead>
+									<TableHead>角色</TableHead>
 								</TableRow>
-							))}
-						</TableBody>
-					</Table>
-				</CardContent>
-			</Card>
+							</TableHeader>
+							<TableBody>
+								{(usersQuery.data ?? []).map((user) => (
+									<TableRow key={user.id}>
+										<TableCell>{user.name}</TableCell>
+										<TableCell>{user.email}</TableCell>
+										<TableCell>
+											<select
+												className="rounded-md border bg-card px-2 py-1 text-sm"
+												defaultValue={user.role ?? "customer"}
+												onChange={(event) =>
+													roleMutation.mutate({
+														id: user.id,
+														role: event.target.value as (typeof roleOptions)[number],
+													})
+												}
+											>
+												{roleOptions.map((role) => (
+													<option key={role} value={role}>
+														{role}
+													</option>
+												))}
+											</select>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					</CardContent>
+				</Card>
+			) : null}
 		</div>
 	);
 }
