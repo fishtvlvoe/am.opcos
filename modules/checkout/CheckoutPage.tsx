@@ -25,6 +25,7 @@ export function CheckoutPage() {
 	const [shippingName, setShippingName] = useState("");
 	const [shippingPhone, setShippingPhone] = useState("");
 	const [shippingAddress, setShippingAddress] = useState("");
+	const [shippingIdNumber, setShippingIdNumber] = useState("");
 	const [notes, setNotes] = useState("");
 	const [errors, setErrors] = useState<{ shippingName?: string; shippingPhone?: string; shippingAddress?: string }>({});
 	const [orderPlaced, setOrderPlaced] = useState(false);
@@ -57,10 +58,50 @@ export function CheckoutPage() {
 		}
 	}, [cartQuery.isSuccess, cartItems.length, router, orderPlaced]);
 
+	const setDefaultAddressMutation = useMutation(
+		orpc.anismile.addresses.setDefault.mutationOptions({
+			onSuccess: () => {
+				void queryClient.invalidateQueries({ queryKey: orpc.anismile.addresses.list.key() });
+			},
+		}),
+	);
+
+	const createAddressMutation = useMutation(
+		orpc.anismile.addresses.create.mutationOptions({
+			onSuccess: () => {
+				void queryClient.invalidateQueries({ queryKey: orpc.anismile.addresses.list.key() });
+			},
+		}),
+	);
+
 	const checkoutMutation = useMutation(
 		orpc.anismile.cart.checkout.mutationOptions({
-			onSuccess: ({ orderId }: { orderId: string }) => {
+			onSuccess: async (
+				{ orderId }: { orderId: string },
+				variables: {
+					shippingName: string;
+					shippingPhone: string;
+					shippingAddress: string;
+					note?: string;
+				},
+			) => {
 				setOrderPlaced(true);
+				if (selectedAddressId === "new") {
+					try {
+						const createdAddress = await createAddressMutation.mutateAsync({
+							label: "常用地址",
+							name: variables.shippingName,
+							phone: variables.shippingPhone,
+							address: variables.shippingAddress,
+							idNumber: shippingIdNumber.trim() || undefined,
+						});
+						if (createdAddress.id) {
+							await setDefaultAddressMutation.mutateAsync({ id: createdAddress.id });
+						}
+					} catch {
+						toastError("訂單已建立，但常用收件資料儲存失敗");
+					}
+				}
 				void queryClient.invalidateQueries({ queryKey: orpc.anismile.cart.getItems.key() });
 				void queryClient.invalidateQueries({ queryKey: orpc.anismile.orders.list.key() });
 				toastSuccess("訂單已建立");
@@ -222,12 +263,24 @@ export function CheckoutPage() {
 										if (errors.shippingAddress) setErrors((prev) => ({ ...prev, shippingAddress: undefined }));
 									}}
 								/>
-								{errors.shippingAddress && (
-									<p className="text-xs text-red-500">{errors.shippingAddress}</p>
-								)}
+									{errors.shippingAddress && (
+										<p className="text-xs text-red-500">{errors.shippingAddress}</p>
+									)}
+								</div>
+
+								<div className="space-y-1">
+									<label className="text-sm text-stone-700">身份證字號</label>
+									<input
+										type="text"
+										maxLength={20}
+										className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none transition-colors focus:border-stone-500"
+										placeholder="清關用，可留空"
+										value={shippingIdNumber}
+										onChange={(e) => setShippingIdNumber(e.target.value)}
+									/>
+								</div>
 							</div>
-						</div>
-					)}
+						)}
 
 					<div className="space-y-1">
 						<label className="text-sm text-stone-700">備註</label>
@@ -276,11 +329,17 @@ export function CheckoutPage() {
 					</div>
 				</div>
 
-				<Button
-					className="w-full"
-					disabled={checkoutMutation.isPending || cartItems.length === 0 || hasUnavailableItems}
-					onClick={handleSubmit}
-				>
+					<Button
+						className="w-full"
+						disabled={
+							checkoutMutation.isPending ||
+							createAddressMutation.isPending ||
+							setDefaultAddressMutation.isPending ||
+							cartItems.length === 0 ||
+							hasUnavailableItems
+						}
+						onClick={handleSubmit}
+					>
 					{checkoutMutation.isPending ? "送出中..." : "確認下單"}
 				</Button>
 			</section>
