@@ -370,7 +370,13 @@ model AnismileWishlistItem {
 model AnismileOrder {
   id              String              @id @default(cuid())
   userId          String              @map("user_id")
+  parentId        String?             @map("parent_id")
+  orderType       String              @default("standard") @map("order_type")
+  splitSuffix     Int?                @map("split_suffix")
   status          String              @default("pending")
+  paymentMethod   String              @default("bank_transfer") @map("payment_method")
+  paymentStatus   String              @default("pending") @map("payment_status")
+  stripeSessionId String?             @map("stripe_session_id")
   totalAmount     Decimal             @map("total_amount") @db.Decimal(12, 2)
   shippingName    String              @default("") @map("shipping_name") @db.VarChar(100)
   shippingPhone   String              @default("") @map("shipping_phone") @db.VarChar(30)
@@ -384,10 +390,14 @@ model AnismileOrder {
   createdAt       DateTime            @default(now()) @map("created_at")
   updatedAt       DateTime            @updatedAt @map("updated_at")
   user            User                @relation(fields: [userId], references: [id])
+  parent          AnismileOrder?      @relation("AnismileOrderSplit", fields: [parentId], references: [id])
+  children        AnismileOrder[]     @relation("AnismileOrderSplit")
   items           AnismileOrderItem[]
 
   @@index([userId])
+  @@index([parentId])
   @@index([status])
+  @@index([paymentStatus])
   @@index([supplierForwardedAt])
   @@map("anismile_orders")
 }
@@ -400,6 +410,8 @@ model AnismileOrderItem {
   unitPrice  Decimal         @map("unit_price") @db.Decimal(10, 2)
   costPrice  Decimal         @map("cost_price") @db.Decimal(10, 2)
   itemStatus       String          @default("pending") @map("item_status")
+  allocatedQty     Int             @default(0) @map("allocated_qty")
+  shippedQty       Int             @default(0) @map("shipped_qty")
   tierDiscountRate Decimal?        @map("tier_discount_rate") @db.Decimal(4, 3)
   createdAt        DateTime        @default(now()) @map("created_at")
   order            AnismileOrder   @relation(fields: [orderId], references: [id])

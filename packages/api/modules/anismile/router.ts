@@ -7,6 +7,7 @@ import {
 } from "./procedures/addresses";
 import {
 	addCartItem,
+	createCheckoutStripeSession,
 	checkoutCart,
 	deleteCartItem,
 	getCartItems,
@@ -24,6 +25,7 @@ import {
 	listOrderRows,
 	patchOrderStatus,
 } from "./procedures/orders";
+import { listChildOrdersProcedure, splitOrderProcedure } from "./procedures/order-split";
 import {
 	batchPatchProducts,
 	getProductById,
@@ -89,11 +91,14 @@ export const anismileRouter = {
 		updateQuantity: updateCartItemQuantityProcedure,
 		removeItem: removeCartItemProcedure,
 		checkout: checkoutCart,
+		checkoutStripeSession: createCheckoutStripeSession,
 	},
 	orders: {
 		create: createOrder,
 		list: listOrderRows,
 		getById: getOrderDetail,
+		split: splitOrderProcedure,
+		children: listChildOrdersProcedure,
 		patch: patchOrderStatus,
 		export: exportOrdersCsv,
 		forwardSupplier: forwardOrderToSupplierProcedure,

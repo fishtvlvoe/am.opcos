@@ -115,13 +115,13 @@ export type AnismileWishlistItemScalarFieldEnum = z.infer<typeof AnismileWishlis
 
 // File: AnismileOrderScalarFieldEnum.schema.ts
 
-export const AnismileOrderScalarFieldEnumSchema = z.enum(['id', 'userId', 'status', 'totalAmount', 'shippingName', 'shippingPhone', 'shippingAddress', 'notes', 'confirmedAt', 'confirmedById', 'supplierForwardedAt', 'supplierForwardedById', 'supplierForwardingError', 'createdAt', 'updatedAt'])
+export const AnismileOrderScalarFieldEnumSchema = z.enum(['id', 'userId', 'parentId', 'orderType', 'splitSuffix', 'status', 'paymentMethod', 'paymentStatus', 'stripeSessionId', 'totalAmount', 'shippingName', 'shippingPhone', 'shippingAddress', 'notes', 'confirmedAt', 'confirmedById', 'supplierForwardedAt', 'supplierForwardedById', 'supplierForwardingError', 'createdAt', 'updatedAt'])
 
 export type AnismileOrderScalarFieldEnum = z.infer<typeof AnismileOrderScalarFieldEnumSchema>;
 
 // File: AnismileOrderItemScalarFieldEnum.schema.ts
 
-export const AnismileOrderItemScalarFieldEnumSchema = z.enum(['id', 'orderId', 'productId', 'quantity', 'unitPrice', 'costPrice', 'itemStatus', 'tierDiscountRate', 'createdAt'])
+export const AnismileOrderItemScalarFieldEnumSchema = z.enum(['id', 'orderId', 'productId', 'quantity', 'unitPrice', 'costPrice', 'itemStatus', 'allocatedQty', 'shippedQty', 'tierDiscountRate', 'createdAt'])
 
 export type AnismileOrderItemScalarFieldEnum = z.infer<typeof AnismileOrderItemScalarFieldEnumSchema>;
 
@@ -513,7 +513,13 @@ export type AnismileWishlistItemType = z.infer<typeof AnismileWishlistItemSchema
 export const AnismileOrderSchema = z.object({
   id: z.string(),
   userId: z.string(),
+  parentId: z.string().nullish(),
+  orderType: z.string().default("standard"),
+  splitSuffix: z.number().int().nullish(),
   status: z.string().default("pending"),
+  paymentMethod: z.string().default("bank_transfer"),
+  paymentStatus: z.string().default("pending"),
+  stripeSessionId: z.string().nullish(),
   totalAmount: z.instanceof(Prisma.Decimal, {
   message: "Field 'totalAmount' must be a Decimal. Location: ['Models', 'AnismileOrder']",
 }),
@@ -547,6 +553,8 @@ export const AnismileOrderItemSchema = z.object({
   message: "Field 'costPrice' must be a Decimal. Location: ['Models', 'AnismileOrderItem']",
 }),
   itemStatus: z.string().default("pending"),
+  allocatedQty: z.number().int(),
+  shippedQty: z.number().int(),
   tierDiscountRate: z.instanceof(Prisma.Decimal, {
   message: "Field 'tierDiscountRate' must be a Decimal. Location: ['Models', 'AnismileOrderItem']",
 }).nullish(),

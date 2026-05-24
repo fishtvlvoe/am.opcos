@@ -176,6 +176,15 @@ export const getOrderDetail = protectedProcedure
 					profit: isAdmin ? profit : undefined,
 				};
 			}),
+			children: order.children.map((child) => ({
+				...child,
+				totalAmount: toNumberRequired(child.totalAmount),
+				items: child.items.map((item) => ({
+					...item,
+					unitPrice: toNumberRequired(item.unitPrice),
+					costPrice: isAdmin ? toNumberRequired(item.costPrice) : undefined,
+				})),
+			})),
 		};
 	});
 
