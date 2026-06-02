@@ -42,6 +42,6 @@ test("search page shows normalized banner query results and table mode", async (
 	await expect(page.getByRole("columnheader", { name: "JAN Code" })).toBeVisible();
 	await expect(page.getByRole("columnheader", { name: "庫存狀態" })).toBeVisible();
 
-	await expect(page.locator("header")).toContainText("AM");
+	await expect(page.locator("header")).toContainText("Libon");
 	await expect(page.locator("header")).not.toContainText("AniSmile");
 });

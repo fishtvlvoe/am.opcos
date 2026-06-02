@@ -9,9 +9,9 @@ function read(relativePath: string) {
 describe("PublicHeader", () => {
 	const filePath = "modules/shared/components/PublicHeader.tsx";
 
-	it("使用 AM 作為主要品牌，不使用上游 wordmark", () => {
+	it("使用 Libon 作為主要品牌，不使用上游 wordmark", () => {
 		const source = read(filePath);
-		expect(source).toContain("AM");
+		expect(source).toContain("Libon");
 		expect(source).not.toContain('src="/logo-wordmark.png"');
 		expect(source).not.toContain('alt="AniSmile"');
 		expect(source).not.toContain('src="/logo.svg"');
