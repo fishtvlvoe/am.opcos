@@ -75,7 +75,7 @@ export function PublicHeader() {
 			<div className="container flex h-14 items-center justify-between gap-3">
 				<Link href="/" className="flex shrink-0 items-center">
 					<span className="inline-flex h-9 items-center rounded-md bg-stone-900 px-3 font-semibold text-lg text-white tracking-wide">
-						AM
+						Libon
 					</span>
 				</Link>
 
