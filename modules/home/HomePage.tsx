@@ -137,6 +137,19 @@ function Footer() {
 
 // ─── 首頁 ──────────────────────────────────────────────────────────────────────
 
+export type HomePageDeadlineData = {
+	items: Array<{
+		id: string;
+		name: string;
+		imageUrl: string;
+		productCount: number;
+		workTitle: string;
+		manufacturer: string;
+		earliestDeadline: number | null;
+		deadlineDate: string;
+	}>;
+};
+
 export function HomePage({
 	initialBannerData,
 	initialSeriesData,
@@ -144,7 +157,7 @@ export function HomePage({
 }: {
 	initialBannerData?: HomePageBannerData;
 	initialSeriesData?: HomePageSeriesData;
-	initialDeadlineData?: { items: any[] };
+	initialDeadlineData?: HomePageDeadlineData;
 }) {
 	const sourceBannerQuery = useQuery(orpc.anismile.homepage.getBanners.queryOptions({
 		input: {},

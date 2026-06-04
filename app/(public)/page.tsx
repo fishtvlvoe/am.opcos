@@ -1,4 +1,4 @@
-import { HomePage, type HomePageBannerData, type HomePageSeriesData } from "../../modules/home/HomePage";
+import { HomePage, type HomePageBannerData, type HomePageDeadlineData, type HomePageSeriesData } from "../../modules/home/HomePage";
 import { fetchPublicJson } from "../../modules/shared/lib/public-prefetch";
 
 export default async function Page() {
@@ -9,7 +9,7 @@ export default async function Page() {
 		fetchPublicJson<HomePageSeriesData>("/api/anismile/homepage/series-list?dateIndex=0&limit=30", {
 			next: { revalidate: 300 },
 		}),
-		fetchPublicJson<{ items: any[] }>("/api/anismile/homepage/deadline-list", {
+		fetchPublicJson<HomePageDeadlineData>("/api/anismile/homepage/deadline-list", {
 			next: { revalidate: 300 },
 		}),
 	]);

@@ -5,6 +5,7 @@ import { AppNav } from "@shared/components/AppNav";
 import { CustomerServiceBubble } from "@shared/components/CustomerServiceBubble";
 import { getServerQueryClient } from "@shared/lib/server";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { PropsWithChildren } from "react";
 
@@ -14,9 +15,15 @@ export const revalidate = 0;
 export default async function AuthenticatedLayout({ children }: PropsWithChildren) {
 	const session = await getSession();
 	const bypassAuthForVisualTest =
-		process.env.NODE_ENV !== "production" && process.env.ANISMILE_VISUAL_TEST_BYPASS_AUTH === "1";
+		process.env.NODE_ENV === "development" && process.env.ANISMILE_VISUAL_TEST_BYPASS_AUTH === "1";
 	if (!session && !bypassAuthForVisualTest) {
 		redirect("/login");
+	}
+
+	const isAdmin = session?.user.role === "admin" || session?.user.role === "super_admin";
+	const pathname = (await headers()).get("x-pathname") ?? "";
+	if (pathname.startsWith("/admin") && !isAdmin) {
+		redirect("/");
 	}
 
 	const queryClient = getServerQueryClient();

@@ -20,7 +20,7 @@ function formatDeadlineLabel(dateStr: string, earliestDeadline: number | null) {
 	return "即將截止";
 }
 
-export function DeadlineSection({ initialData }: { initialData?: { items: any[] } }) {
+export function DeadlineSection({ initialData }: { initialData?: { items: Array<{ id: string; name: string; imageUrl: string; productCount: number; workTitle: string; manufacturer: string; earliestDeadline: number | null; deadlineDate: string }> } }) {
 	const deadlineQuery = useQuery({
 		...orpc.anismile.homepage.getDeadlineList.queryOptions({
 			input: {},

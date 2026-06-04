@@ -35,6 +35,7 @@ const SERIES_IMAGE_CACHE_TTL_MS = 5 * 60 * 1000;
 const SOURCE_PRODUCT_REFRESH_TTL_MS = 30 * 60 * 1000;
 
 let seriesImageCache: { expiresAt: number; map: Map<string, string> } | null = null;
+let seriesImageCachePromise: Promise<Map<string, string>> | null = null;
 
 type SeriesImageResponse = {
 	code: number;
@@ -125,11 +126,7 @@ async function refreshSourceProductIfNeeded(product: {
 	);
 }
 
-async function getSourceSeriesImageMap() {
-	if (seriesImageCache && seriesImageCache.expiresAt > Date.now()) {
-		return seriesImageCache.map;
-	}
-
+async function fetchSourceSeriesImageMap(): Promise<Map<string, string>> {
 	const responses = await Promise.all(
 		Array.from({ length: 7 }, async (_, dateIndex) => {
 			const url = new URL(`${ANISMILE_ORIGIN}/series_list/index`);
@@ -153,6 +150,18 @@ async function getSourceSeriesImageMap() {
 		map,
 	};
 	return map;
+}
+
+async function getSourceSeriesImageMap() {
+	if (seriesImageCache && seriesImageCache.expiresAt > Date.now()) {
+		return seriesImageCache.map;
+	}
+	if (!seriesImageCachePromise) {
+		seriesImageCachePromise = fetchSourceSeriesImageMap().finally(() => {
+			seriesImageCachePromise = null;
+		});
+	}
+	return seriesImageCachePromise;
 }
 
 function getSeriesFallbackImage(series: string | null, seriesImageMap: Map<string, string>) {
@@ -548,7 +557,7 @@ export const searchProducts = publicProcedure
 		z.object({
 			query: z.string().min(1),
 			filters: productFiltersShape.optional(),
-			sort: productSortSchema.optional(),
+			sort: z.string().optional(),
 			page: z.number().int().min(1).optional(),
 			perPage: z.number().int().min(1).max(100).optional(),
 		}),

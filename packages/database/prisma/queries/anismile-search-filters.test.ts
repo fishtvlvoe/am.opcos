@@ -16,7 +16,7 @@ describe("anismile public search filters and fallback sort", () => {
 		expect(source).toContain("showUnavailable: z.boolean().optional()");
 		expect(source).toContain("inStock: z.boolean().optional()");
 		expect(source).toContain("urgentDeadline: z.boolean().optional()");
-		expect(source).toContain("sort: productSortSchema.optional()");
+		expect(source).toContain("sort: z.string().optional()");
 	});
 
 	it("uses showUnavailable, inStock, and urgentDeadline in search where clauses", () => {

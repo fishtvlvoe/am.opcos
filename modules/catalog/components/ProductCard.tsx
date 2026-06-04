@@ -6,7 +6,7 @@ import { differenceInCalendarDays, format } from "date-fns";
 import { Heart, MinusIcon, PlusIcon, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { StockBadge } from "../../shared/components/StockBadge";
 import { DeadlineBadge } from "./DeadlineBadge";
@@ -62,6 +62,10 @@ export function ProductCard({
 	const { user } = useSession();
 	const [quantity, setQuantity] = useState(1);
 	const [isFavorited, setIsFavorited] = useState(wishlisted ?? false);
+
+	useEffect(() => {
+		setIsFavorited(wishlisted ?? false);
+	}, [wishlisted]);
 	const listingLabel = listingDate ? format(new Date(listingDate), "M/d") : null;
 	const isNewProduct = listingDate ? (Date.now() - new Date(listingDate).getTime()) / (1000 * 60 * 60 * 24) <= 7 : false;
 	const publicOriginalPrice = originalPrice ?? price;

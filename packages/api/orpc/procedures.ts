@@ -5,15 +5,22 @@ export const publicProcedure = os.$context<{
 	headers: Headers;
 }>();
 
+function generateMockId() {
+	return `mock-${crypto.randomUUID()}`;
+}
+
 export const protectedProcedure = publicProcedure.use(async ({ context, next }) => {
 	const bypassAuthForVisualTest =
-		process.env.NODE_ENV !== "production" && process.env.ANISMILE_VISUAL_TEST_BYPASS_AUTH === "1";
+		process.env.NODE_ENV === "development" && process.env.ANISMILE_VISUAL_TEST_BYPASS_AUTH === "1";
 
 	let session;
 	if (bypassAuthForVisualTest) {
+		const mockUserId = generateMockId();
+		// eslint-disable-next-line no-console
+		console.warn("[AUTH BYPASS] Visual test bypass is enabled. Mock user:", mockUserId);
 		session = {
-			session: { id: "mock-session-id", userId: "mock-admin-id", expiresAt: new Date(Date.now() + 3600000) },
-			user: { id: "mock-admin-id", role: "admin", email: "admin@example.com", name: "Mock Admin" },
+			session: { id: generateMockId(), userId: mockUserId, expiresAt: new Date(Date.now() + 3600000) },
+			user: { id: mockUserId, role: "admin", email: "mock@localhost", name: "Mock Admin" },
 		};
 	} else {
 		session = await auth.api.getSession({

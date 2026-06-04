@@ -28,8 +28,8 @@ describe("code review remediation contracts", () => {
 		expect(productPoolSource).toContain('z.enum(["pending", "confirmed", "shipped", "completed", "cancelled"])');
 	});
 
-	it("visual auth bypass cannot run in production", () => {
-		expect(authenticatedLayoutSource).toContain('process.env.NODE_ENV !== "production"');
+	it("visual auth bypass is restricted to development only", () => {
+		expect(authenticatedLayoutSource).toContain('process.env.NODE_ENV === "development"');
 		expect(authenticatedLayoutSource).toContain("ANISMILE_VISUAL_TEST_BYPASS_AUTH");
 	});
 
