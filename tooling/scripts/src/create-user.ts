@@ -46,7 +46,7 @@ async function main() {
 	const adminUser = await createUser({
 		email,
 		name,
-		role: isAdmin ? "admin" : "user",
+		role: isAdmin ? "admin" : "customer",
 		emailVerified: true,
 		onboardingComplete: true,
 	});

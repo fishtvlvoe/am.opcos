@@ -245,7 +245,7 @@ export const auth = betterAuth({
 	},
 	plugins: [
 		username(),
-		admin(),
+		admin({ defaultRole: "customer" }),
 		passkey(),
 		magicLink({
 			disableSignUp: false,

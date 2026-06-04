@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/server";
-import { db, getTierSettingsValues } from "@repo/database";
+import { db } from "@repo/database";
 import { z } from "zod";
 
 import { protectedProcedure } from "../../../orpc/procedures";
@@ -75,21 +75,6 @@ export const confirmImportOrder = protectedProcedure
 		}),
 	)
 	.handler(async ({ input, context: { user } }) => {
-		const tierSettings = await getTierSettingsValues();
-
-		// 取得用戶等級
-		const userRecord = await db.user.findUnique({
-			where: { id: user.id },
-			select: { anismileTier: true },
-		});
-		const tier = userRecord?.anismileTier ?? "NORMAL";
-		const tierDiscount =
-			tier === "VIP"
-				? tierSettings.vipDiscount
-				: tier === "WHOLESALE"
-					? tierSettings.wholesaleDiscount
-					: 0;
-
 		// 取得所有商品資訊
 		const productIds = input.items.map((i) => i.productId);
 		const products = await db.anismileProduct.findMany({
@@ -117,21 +102,13 @@ export const confirmImportOrder = protectedProcedure
 		}
 
 		const order = await db.$transaction(async (tx) => {
-			// 計算每個品項的單價（有 markupOverride 不套用等級折扣）
-			// Prisma Decimal.mul() 接受 number
 			const orderItems = input.items.map((item) => {
 				const product = productMap.get(item.productId)!;
-				// 有 markupOverride → 直接用 sellingPrice
-				// 無 markupOverride → 套用等級折扣
-				const unitPrice =
-					product.markupOverride !== null
-						? product.sellingPrice
-						: product.sellingPrice.mul(1 - tierDiscount);
 
 				return {
 					productId: item.productId,
 					quantity: item.quantity,
-					unitPrice,
+					unitPrice: product.sellingPrice,
 					costPrice: product.costPrice,
 				};
 			});

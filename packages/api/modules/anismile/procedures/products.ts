@@ -2,6 +2,7 @@ import { ORPCError } from "@orpc/server";
 import { auth } from "@repo/auth";
 import {
 	db,
+	getDefaultBacksolvePercent,
 	getAnismileProductById,
 	listAnismileProducts,
 	listLatestAnismileProducts,
@@ -10,6 +11,8 @@ import {
 	setProductMarkupOverride,
 	updateProductFields,
 	upsertProductsFromSync,
+	calculateBacksolveSellingPrice,
+	Prisma,
 } from "@repo/database";
 import { z } from "zod";
 
@@ -77,7 +80,7 @@ function isPubliclyOrderableProduct(product: {
 	inStock: boolean;
 	orderDeadline: Date | null;
 }) {
-	if (!product.inStock) return false;
+	if (product.inStock) return true;
 	return !product.orderDeadline || product.orderDeadline.getTime() >= Date.now();
 }
 
@@ -89,7 +92,9 @@ async function refreshSourceProductIfNeeded(product: {
 	lastSyncedAt: Date;
 }) {
 	if (!shouldRefreshSourceProduct(product)) return;
-	const refreshed = await crawlAnismileProductBySupplierId(product.supplierId).catch(() => null);
+	const refreshed = await crawlAnismileProductBySupplierId(product.supplierId, {
+		authMode: "authenticated",
+	}).catch(() => null);
 	if (!refreshed) return;
 	await upsertProductsFromSync(
 		[{
@@ -114,6 +119,7 @@ async function refreshSourceProductIfNeeded(product: {
 			franchise: refreshed.franchise,
 			janCode: refreshed.janCode,
 			releaseDate: refreshed.releaseDate,
+			sourceAuthState: refreshed.sourceAuthState,
 		}],
 		{ markMissingOutOfStock: false },
 	);
@@ -182,8 +188,8 @@ const listProductsInput = z.object({
 	series: z.string().min(1).optional(),
 	search: z.string().min(1).optional(),
 	listingDate: z.string().date().optional(),
-	page: z.number().int().min(1).default(1),
-	pageSize: z.number().int().min(1).max(100).default(20),
+	page: z.coerce.number().int().min(1).default(1),
+	pageSize: z.coerce.number().int().min(1).max(100).default(20),
 	inStock: z.boolean().optional(),
 	urgentDeadline: z.boolean().optional(),
 	showUnavailable: z.boolean().optional(),
@@ -203,6 +209,8 @@ export const listProducts = publicProcedure
 	.handler(async ({ input, context }) => {
 		const showPrices = await canSeePricing(context.headers);
 		const listingDate = input.listingDate ? new Date(input.listingDate) : undefined;
+		const includeUnavailableMatches = input.showUnavailable === true;
+		const onlyInStock = includeUnavailableMatches ? input.inStock === true : true;
 		let result = await listAnismileProducts({
 			page: input.page,
 			pageSize: input.pageSize,
@@ -210,52 +218,48 @@ export const listProducts = publicProcedure
 			series: input.series,
 			search: input.search,
 			listingDate,
-			onlyInStock: !input.showUnavailable || input.inStock === true,
+			onlyInStock,
 			urgentDeadline: input.urgentDeadline,
-			showUnavailable: input.showUnavailable,
+			showUnavailable: includeUnavailableMatches,
 			sort: input.sort,
 		});
-		if (input.series && result.total === 0) {
-			const crawledProducts = await crawlAnismileProductsBySeriesName(input.series);
-			if (crawledProducts.length > 0) {
-				await upsertProductsFromSync(
-					crawledProducts.map((item) => ({
-						supplierId: item.supplierId,
-						sourceUrl: item.sourceUrl,
-						titleOriginal: item.titleOriginal,
-						titleTranslated: item.titleTranslated,
-						descriptionOriginal: item.descriptionOriginal,
-						descriptionTranslated: item.descriptionTranslated,
-						imageUrls: item.imageUrls,
-						category: item.category,
-						series: item.series,
-						originalPrice: item.originalPrice,
-						costPrice: item.costPrice,
-						listingDate: item.listingDate,
-						orderDeadline: item.orderDeadline,
-						inStock: item.inStock,
-						stockQuantity: item.stockQuantity,
-						lastSyncedAt: new Date(),
-						discountRate: item.discountRate,
-						brand: item.brand,
-						franchise: item.franchise,
-						janCode: item.janCode,
-						releaseDate: item.releaseDate,
-					})),
-				);
-				result = await listAnismileProducts({
-					page: input.page,
-					pageSize: input.pageSize,
-					category: input.category,
-					series: input.series,
-					search: input.search,
-					listingDate,
-					onlyInStock: !input.showUnavailable || input.inStock === true,
-					urgentDeadline: input.urgentDeadline,
-					showUnavailable: input.showUnavailable,
-					sort: input.sort,
-				});
-			}
+		if (input.series && result.total < 5) {
+			const seriesName = input.series;
+			(async () => {
+				try {
+					const crawledProducts = await crawlAnismileProductsBySeriesName(seriesName, 200);
+					if (crawledProducts.length > 0) {
+						await upsertProductsFromSync(
+							crawledProducts.map((item) => ({
+								supplierId: item.supplierId,
+								sourceUrl: item.sourceUrl,
+								titleOriginal: item.titleOriginal,
+								titleTranslated: item.titleTranslated,
+								descriptionOriginal: item.descriptionOriginal,
+								descriptionTranslated: item.descriptionTranslated,
+								imageUrls: item.imageUrls,
+								category: item.category,
+								series: item.series,
+								originalPrice: item.originalPrice,
+								costPrice: item.costPrice,
+								listingDate: item.listingDate,
+								orderDeadline: item.orderDeadline,
+								inStock: item.inStock,
+								stockQuantity: item.stockQuantity,
+								lastSyncedAt: new Date(),
+								discountRate: item.discountRate,
+								brand: item.brand,
+								franchise: item.franchise,
+								janCode: item.janCode,
+								releaseDate: item.releaseDate,
+								sourceAuthState: item.sourceAuthState,
+							})),
+						);
+					}
+				} catch (err) {
+					console.error(`Background crawler failed for series ${seriesName}:`, err);
+				}
+			})();
 		}
 		const seriesImageMap = await getSeriesImageMapForProducts(result.items);
 
@@ -272,6 +276,7 @@ export const listProducts = publicProcedure
 				janCode: item.janCode,
 				brand: item.brand,
 				franchise: item.franchise,
+				originalPrice: item.originalPrice ? toNumber(item.originalPrice) : null,
 				sellingPrice: publicPrice(toNumberRequired(item.sellingPrice), showPrices),
 				listingDate: item.listingDate,
 					orderDeadline: item.orderDeadline,
@@ -342,6 +347,7 @@ export const listLatestProducts = publicProcedure
 			titleTranslated: item.titleTranslated,
 			titleOriginal: item.titleOriginal,
 			imageUrls: getDisplayImageUrls(item, seriesImageMap),
+			originalPrice: item.originalPrice ? toNumber(item.originalPrice) : null,
 			sellingPrice: publicPrice(toNumberRequired(item.sellingPrice), showPrices),
 			listingDate: item.listingDate,
 			orderDeadline: item.orderDeadline,
@@ -386,7 +392,7 @@ export const getProductById = publicProcedure
 			brand: product.brand ?? null,
 			franchise: product.franchise ?? null,
 			boxSpec: product.boxSpec ?? null,
-			originalPrice: showPrices && product.originalPrice ? Number(product.originalPrice) : null,
+			originalPrice: product.originalPrice ? Number(product.originalPrice) : null,
 			costPrice: showPrices && product.costPrice ? Number(product.costPrice) : null,
 			discountRate: showPrices && product.discountRate ? Number(product.discountRate) : null,
 			saleStatus: product.saleStatus ?? null,
@@ -410,7 +416,7 @@ export const patchProductMarkup = anismileAdminProcedure
 	.input(
 		z.object({
 			id: z.string().min(1),
-			markupOverride: z.number().positive().max(10).nullable(),
+			markupOverride: z.number().min(0).max(100).nullable(),
 		}),
 	)
 	.handler(async ({ input }) => {
@@ -444,7 +450,7 @@ export const patchProduct = anismileAdminProcedure
 			id: z.string().min(1),
 			titleTranslated: z.string().min(1).optional(),
 			sellingPrice: z.number().positive().optional(),
-			markupOverride: z.number().min(0.01).max(10).nullable().optional(),
+			markupOverride: z.number().min(0).max(100).nullable().optional(),
 			discountRate: z.number().min(0).max(1).nullable().optional(),
 			saleStatus: z.enum(["預售中", "有現貨"]).nullable().optional(),
 		}),
@@ -519,7 +525,7 @@ function serializeProduct(p: {
 		janCode: p.janCode,
 		brand: p.brand,
 		franchise: p.franchise,
-		originalPrice: showPrices && p.originalPrice ? toNumber(p.originalPrice) : null,
+		originalPrice: p.originalPrice ? toNumber(p.originalPrice) : null,
 		costPrice: showPrices ? toNumberRequired(p.costPrice) : null,
 		sellingPrice: publicPrice(toNumberRequired(p.sellingPrice), showPrices),
 		discountRate: showPrices && p.discountRate ? toNumber(p.discountRate) : null,
@@ -555,6 +561,7 @@ export const searchProducts = publicProcedure
 			items: result.items.map((item) => serializeProduct(item, showPrices, seriesImageMap)),
 			total: result.total,
 			facets: result.facets,
+			usedUnavailableFallback: result.usedUnavailableFallback,
 		};
 	});
 
@@ -604,16 +611,54 @@ export const batchPatchProducts = anismileAdminProcedure
 		z.object({
 			ids: z.array(z.string().min(1)).min(1).max(200),
 			discountRate: z.number().min(0).max(1).nullable().optional(),
-			markupOverride: z.number().min(0.01).max(10).nullable().optional(),
+			markupOverride: z.number().min(0).max(100).nullable().optional(),
 		}),
 	)
 	.handler(async ({ input }) => {
-		const data: Record<string, number | null> = {};
-		if (input.discountRate !== undefined) data.discountRate = input.discountRate;
-		if (input.markupOverride !== undefined) data.markupOverride = input.markupOverride;
-		await db.anismileProduct.updateMany({
+		const defaultBacksolvePercent = await getDefaultBacksolvePercent();
+		const products = await db.anismileProduct.findMany({
 			where: { id: { in: input.ids } },
-			data,
+			select: {
+				id: true,
+				originalPrice: true,
+				costPrice: true,
+				sellingPrice: true,
+				priceManualOverride: true,
+			},
 		});
+
+		await db.$transaction(
+			products.map((product) => {
+				const data: {
+					discountRate?: number | null;
+					markupOverride?: number | null;
+					priceManualOverride?: boolean;
+					sellingPrice?: ReturnType<typeof calculateBacksolveSellingPrice>;
+				} = {};
+				if (input.discountRate !== undefined) {
+					data.discountRate = input.discountRate;
+				}
+				if (input.markupOverride !== undefined) {
+					const backsolvePercent = input.markupOverride !== null
+						? new Prisma.Decimal(input.markupOverride)
+						: defaultBacksolvePercent;
+					data.markupOverride =
+						input.markupOverride !== null ? input.markupOverride : null;
+					data.priceManualOverride = false;
+					data.sellingPrice =
+						product.originalPrice && product.originalPrice.gt(0)
+							? calculateBacksolveSellingPrice({
+									originalPrice: product.originalPrice,
+									costPrice: product.costPrice,
+									backsolvePercent,
+								})
+							: product.sellingPrice;
+				}
+				return db.anismileProduct.update({
+					where: { id: product.id },
+					data,
+				});
+			}),
+		);
 		return { updatedCount: input.ids.length };
 	});

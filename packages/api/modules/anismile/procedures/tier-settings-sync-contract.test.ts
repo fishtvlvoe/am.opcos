@@ -38,13 +38,16 @@ describe("tier settings sync contract", () => {
 	it("removes hardcoded tier discounts from cart and import-order procedures", () => {
 		expect(cartSource).not.toContain("const TIER_DISCOUNTS");
 		expect(importOrderSource).not.toContain("const TIER_DISCOUNTS");
-		expect(cartSource).toContain("await getTierSettingsValues()");
-		expect(importOrderSource).toContain("await getTierSettingsValues()");
+		expect(cartSource).not.toContain("await getTierSettingsValues()");
+		expect(importOrderSource).not.toContain("await getTierSettingsValues()");
+		expect(cartSource).toContain("tierDiscount: 0");
+		expect(importOrderSource).not.toContain("tierDiscount");
 	});
 
 	it("removes hardcoded tier discounts from createOrderFromCart", () => {
 		expect(databaseSource).not.toContain("const TIER_DISCOUNTS");
-		expect(databaseSource).toContain("const tierSettings = await getTierSettingsValues()");
+		expect(databaseSource).not.toContain("const tierSettings = await getTierSettingsValues()");
+		expect(databaseSource).toContain("tierDiscountRate: null");
 	});
 
 	it("reads tier thresholds from DB in tier adjuster", () => {

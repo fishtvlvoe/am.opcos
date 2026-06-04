@@ -7,6 +7,8 @@ import { Heart, MinusIcon, PlusIcon, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { PriceDisplay } from "./PriceDisplay";
+
 type TableProduct = {
 	id: string;
 	title: string;
@@ -106,7 +108,7 @@ export function TableView({ products, onAddToCart, onToggleWishlist }: TableView
 					<tr className="border-b border-stone-200 bg-stone-50">
 						<th className="px-3 py-2.5 text-left font-medium text-stone-600">商品名稱</th>
 						<th className="px-3 py-2.5 text-right font-medium text-stone-600">價格</th>
-						<th className="px-3 py-2.5 text-right font-medium text-stone-600">折扣率</th>
+						<th className="px-3 py-2.5 text-right font-medium text-stone-600">會員價</th>
 						<th className="px-3 py-2.5 text-center font-medium text-stone-600">下單單位</th>
 						<th className="px-3 py-2.5 text-center font-medium text-stone-600">截止日期</th>
 						<th className="px-3 py-2.5 text-center font-medium text-stone-600">發售日期</th>
@@ -121,21 +123,18 @@ export function TableView({ products, onAddToCart, onToggleWishlist }: TableView
 								<p className="line-clamp-1 max-w-[200px] text-stone-800">{product.title}</p>
 							</td>
 							<td className="px-3 py-2.5 text-right">
-								<div>
-									{product.originalPrice && (
-										<span className="text-xs text-stone-500 line-through">¥{product.originalPrice}</span>
-									)}
-									<p className="font-medium text-stone-900">
-										{product.sellingPrice === null ? "登入查看價格" : `¥${product.sellingPrice}`}
-									</p>
-								</div>
+								<PriceDisplay
+									originalPrice={product.originalPrice}
+									memberPrice={product.sellingPrice}
+									align="right"
+								/>
 							</td>
 							<td className="px-3 py-2.5 text-right">
-								{product.discountRate && (
-									<span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-										{Math.round(product.discountRate * 100)}折
-									</span>
-									)}
+								{product.sellingPrice === null ? (
+									<span className="text-xs text-stone-500">登入後可見</span>
+								) : (
+									<span className="text-xs font-medium text-stone-700">已套會員價</span>
+								)}
 							</td>
 							<td className="px-3 py-2.5 text-center text-stone-600">
 								{product.boxSpec ?? "個"}

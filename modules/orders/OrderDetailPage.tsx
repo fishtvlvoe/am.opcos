@@ -5,6 +5,7 @@ import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { orpc } from "@shared/lib/orpc-query-utils";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import Link from "next/link";
 
 const statusLabels: Record<string, string> = {
 	pending: "待確認",
@@ -13,6 +14,11 @@ const statusLabels: Record<string, string> = {
 	completed: "已完成",
 	cancelled: "已取消",
 };
+function getFirstImageUrl(value: unknown): string | null {
+	if (!Array.isArray(value)) return null;
+	const first = value.find((item) => typeof item === "string" && item.length > 0);
+	return typeof first === "string" ? first : null;
+}
 
 export function OrderDetailPage({ id, isConfirmation = false }: { id: string; isConfirmation?: boolean }) {
 	const { user } = useSession();
@@ -71,11 +77,25 @@ export function OrderDetailPage({ id, isConfirmation = false }: { id: string; is
 					<CardTitle>品項明細</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-3">
-					{order.items.map((item) => (
+					{order.items.map((item) => {
+						const imageUrl = getFirstImageUrl(item.product.imageUrls);
+						return (
 						<div key={item.id} className="flex items-center justify-between border-b pb-3 last:border-b-0">
-							<div>
+							<div className="flex items-center gap-3">
+								{imageUrl ? (
+									<img
+										src={imageUrl}
+										alt=""
+										className="h-12 w-12 shrink-0 rounded-md border border-stone-200 object-cover"
+										loading="lazy"
+									/>
+								) : (
+									<div className="h-12 w-12 shrink-0 rounded-md border border-dashed border-stone-200 bg-stone-50" />
+								)}
+								<div>
 								<p className="font-medium">{item.product.titleTranslated || item.product.titleOriginal}</p>
 								<p className="text-sm text-muted-foreground">數量 {item.quantity}</p>
+								</div>
 							</div>
 							<div className="text-right text-sm">
 								<p>售價 ¥ {Number(item.unitPrice).toFixed(2)}</p>
@@ -83,9 +103,39 @@ export function OrderDetailPage({ id, isConfirmation = false }: { id: string; is
 								{isAdmin && item.profit && <p>毛利 ¥ {Number(item.profit).toFixed(2)}</p>}
 							</div>
 						</div>
-					))}
+					);
+					})}
 				</CardContent>
 			</Card>
+
+			{order.children && order.children.length > 0 ? (
+				<Card>
+					<CardHeader>
+						<CardTitle>子訂單</CardTitle>
+					</CardHeader>
+					<CardContent className="space-y-2 text-sm">
+						{order.children.map((child) => (
+							<div
+								key={child.id}
+								className="flex items-center justify-between rounded-md border border-stone-200 px-3 py-2"
+							>
+								<div>
+									<p className="font-medium">#{child.splitSuffix ?? "-"}</p>
+									<p className="text-xs text-stone-500">
+										{child.items.length} 品項・{statusLabels[child.status] ?? child.status}
+									</p>
+								</div>
+								<div className="flex items-center gap-3">
+									<p className="font-medium">¥ {Number(child.totalAmount).toFixed(2)}</p>
+									<Link className="text-xs text-blue-600 underline" href={`/orders/${child.id}`}>
+										查看
+									</Link>
+								</div>
+							</div>
+						))}
+					</CardContent>
+				</Card>
+			) : null}
 		</div>
 	);
 }

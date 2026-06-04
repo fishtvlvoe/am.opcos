@@ -9,6 +9,10 @@ import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { OrderCard } from "./components/OrderCard";
 
 const statuses = ["pending", "confirmed", "shipped", "completed", "cancelled"] as const;
+function toImageUrlArray(value: unknown): string[] {
+	if (!Array.isArray(value)) return [];
+	return value.filter((item): item is string => typeof item === "string" && item.length > 0);
+}
 
 export function OrdersPage() {
 	const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
@@ -65,6 +69,7 @@ export function OrdersPage() {
 							totalAmount={Number(row.totalAmount)}
 							createdAt={row.createdAt}
 							itemCount={row.items.length}
+							images={row.items.flatMap((item) => toImageUrlArray(item.product.imageUrls)).slice(0, 3)}
 						/>
 					))}
 				</div>

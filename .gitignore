@@ -58,3 +58,18 @@ graphify-out/
 .content-collections/
 .prisma-zod-generator-manifest.json
 .vercel
+
+# Project tools caches and visual test reports
+.claude/
+.cursor/
+.cursorrules
+.gemini/
+.github/
+.opencode/
+.tmp.live.env
+e2e/visual-diff-report.json
+test-results/
+tooling/tmp/
+tooling/so-source-probe/
+.env.vercel.production
+.vercel.bak.codex-20260603/

@@ -194,6 +194,9 @@ importers:
       '@repo/database':
         specifier: workspace:*
         version: link:packages/database
+      '@repo/payments':
+        specifier: workspace:*
+        version: link:packages/payments
       '@repo/sync':
         specifier: workspace:*
         version: link:packages/sync
@@ -330,6 +333,9 @@ importers:
       '@repo/mail':
         specifier: workspace:*
         version: link:../mail
+      '@repo/payments':
+        specifier: workspace:*
+        version: link:../payments
       '@repo/utils':
         specifier: workspace:*
         version: link:../utils
@@ -551,7 +557,7 @@ importers:
         version: link:../../tooling/typescript
       '@tailwindcss/line-clamp':
         specifier: ^0.4.4
-        version: 0.4.4(tailwindcss@4.3.0)
+        version: 0.4.4(tailwindcss@4.2.4)
       '@types/node':
         specifier: 'catalog:'
         version: 25.6.0
@@ -719,6 +725,9 @@ importers:
 
   tooling/scripts:
     dependencies:
+      '@repo/api':
+        specifier: workspace:*
+        version: link:../../packages/api
       '@repo/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -747,6 +756,28 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
+
+  tooling/so-source-probe:
+    dependencies:
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.59.1
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+    devDependencies:
+      '@repo/tsconfig':
+        specifier: workspace:*
+        version: link:../typescript
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.6.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.5(@types/node@25.6.0)(@vitest/coverage-v8@4.1.6)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.21.0)
 
   tooling/tailwind:
     devDependencies:
@@ -7775,9 +7806,9 @@ snapshots:
     dependencies:
       '@swc/counter': 0.1.3
 
-  '@tailwindcss/line-clamp@0.4.4(tailwindcss@4.3.0)':
+  '@tailwindcss/line-clamp@0.4.4(tailwindcss@4.2.4)':
     dependencies:
-      tailwindcss: 4.3.0
+      tailwindcss: 4.2.4
 
   '@tailwindcss/node@4.3.0':
     dependencies:
@@ -7863,7 +7894,7 @@ snapshots:
   '@types/body-parser@1.19.6':
     dependencies:
       '@types/connect': 3.4.38
-      '@types/node': 20.19.40
+      '@types/node': 25.6.0
 
   '@types/chai@5.2.3':
     dependencies:
@@ -7872,11 +7903,11 @@ snapshots:
 
   '@types/connect@3.4.38':
     dependencies:
-      '@types/node': 20.19.40
+      '@types/node': 25.6.0
 
   '@types/cors@2.8.19':
     dependencies:
-      '@types/node': 20.19.40
+      '@types/node': 25.6.0
 
   '@types/d3-array@3.2.2': {}
 
@@ -7908,7 +7939,7 @@ snapshots:
 
   '@types/express-serve-static-core@5.1.1':
     dependencies:
-      '@types/node': 20.19.40
+      '@types/node': 25.6.0
       '@types/qs': 6.15.1
       '@types/range-parser': 1.2.7
       '@types/send': 1.2.1
@@ -7935,13 +7966,13 @@ snapshots:
 
   '@types/pg@8.20.0':
     dependencies:
-      '@types/node': 20.19.40
+      '@types/node': 25.6.0
       pg-protocol: 1.13.0
       pg-types: 2.2.0
 
   '@types/pngjs@6.0.5':
     dependencies:
-      '@types/node': 20.19.40
+      '@types/node': 25.6.0
 
   '@types/qs@6.15.1': {}
 
@@ -7957,18 +7988,18 @@ snapshots:
 
   '@types/send@1.2.1':
     dependencies:
-      '@types/node': 20.19.40
+      '@types/node': 25.6.0
 
   '@types/serve-static@2.2.0':
     dependencies:
       '@types/http-errors': 2.0.5
-      '@types/node': 20.19.40
+      '@types/node': 25.6.0
 
   '@types/use-sync-external-store@0.0.6': {}
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 20.19.40
+      '@types/node': 25.6.0
 
   '@vitest/coverage-v8@4.1.6(vitest@4.1.5)':
     dependencies:
@@ -8482,7 +8513,7 @@ snapshots:
   engine.io@6.6.7:
     dependencies:
       '@types/cors': 2.8.19
-      '@types/node': 20.19.40
+      '@types/node': 25.6.0
       '@types/ws': 8.18.1
       accepts: 1.3.8
       base64id: 2.0.0

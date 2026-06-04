@@ -37,7 +37,7 @@ import {
 	patchProductMarkup,
 	searchProducts,
 } from "./procedures/products";
-import { getBanners, getDeadlineProducts, getListingDates, getProductsByDate, getSeriesList } from "./procedures/homepage";
+import { getBanners, getDeadlineProducts, getListingDates, getProductsByDate, getSeriesList, getDeadlineList, getInstockList } from "./procedures/homepage";
 import { confirmImportOrder, matchProducts } from "./procedures/import-order";
 import { adminUpdateTier, getMyTier } from "./procedures/member-tier";
 import { getNotificationSettings, patchNotificationSettings, testLineNotification } from "./procedures/notifications";
@@ -136,5 +136,7 @@ export const anismileRouter = {
 		getListingDates: getListingDates,
 		getProductsByDate: getProductsByDate,
 		getSeriesList: getSeriesList,
+		getDeadlineList: getDeadlineList,
+		getInstockList: getInstockList,
 	},
 };

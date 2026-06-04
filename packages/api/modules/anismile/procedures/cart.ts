@@ -4,7 +4,6 @@ import {
 	createOrderFromCart,
 	db,
 	getOrderById,
-	getTierSettingsValues,
 	listCartItems,
 	removeCartItem,
 	updateCartItemQuantity as updateCartItemQuantityQuery,
@@ -78,7 +77,13 @@ async function refreshUserCartProducts(userId: string) {
 	if (staleSupplierIds.length === 0) return;
 
 	const refreshedProducts = (
-		await Promise.all(staleSupplierIds.map((supplierId) => crawlAnismileProductBySupplierId(supplierId).catch(() => null)))
+		await Promise.all(
+			staleSupplierIds.map((supplierId) =>
+				crawlAnismileProductBySupplierId(supplierId, {
+					authMode: "authenticated",
+				}).catch(() => null),
+			),
+		)
 	).filter((item): item is CrawledAnismileProduct => Boolean(item));
 
 	if (refreshedProducts.length === 0) return;
@@ -106,6 +111,7 @@ async function refreshUserCartProducts(userId: string) {
 			franchise: item.franchise,
 			janCode: item.janCode,
 			releaseDate: item.releaseDate,
+			sourceAuthState: item.sourceAuthState,
 		})),
 		{ markMissingOutOfStock: false },
 	);
@@ -163,33 +169,19 @@ export const getCartItems = protectedProcedure
 		summary: "Get cart items",
 	})
 	.handler(async ({ context: { user } }) => {
-		const tierSettings = await getTierSettingsValues();
 		await refreshUserCartProducts(user.id);
 		await pruneUnavailableCartItems(user.id);
-
-		// 取得用戶等級折扣
 		const userRecord = await db.user.findUnique({
 			where: { id: user.id },
 			select: { anismileTier: true },
 		});
 		const tier = userRecord?.anismileTier ?? "NORMAL";
-		const tierDiscount =
-			tier === "VIP"
-				? tierSettings.vipDiscount
-				: tier === "WHOLESALE"
-					? tierSettings.wholesaleDiscount
-					: 0;
 
 		const result = await listCartItems(user.id);
 
-		// 重新計算 lineTotal（有 markupOverride 不套用等級折扣）
 		const items = result.items.map((item) => {
 			const sellingPrice = toNumberRequired(item.product.sellingPrice);
-			const effectivePrice =
-				item.product.markupOverride !== null
-					? sellingPrice
-					: sellingPrice * (1 - tierDiscount);
-			const lineTotal = effectivePrice * item.quantity;
+			const lineTotal = sellingPrice * item.quantity;
 
 			return {
 				...item,
@@ -198,7 +190,7 @@ export const getCartItems = protectedProcedure
 					sellingPrice,
 				},
 				lineTotal,
-				tierDiscount,
+				tierDiscount: 0,
 				isOrderable: item.unavailableReason === null,
 				unavailableReason:
 					item.unavailableReason === "Product order deadline has passed"
@@ -216,7 +208,7 @@ export const getCartItems = protectedProcedure
 			total: cartTotal,
 			cartTotal,
 			tier,
-			tierDiscount,
+			tierDiscount: 0,
 		};
 	});
 

@@ -161,7 +161,9 @@ export function CatalogPage() {
 								key={item.id}
 								id={item.id}
 								title={item.titleTranslated || item.titleOriginal}
-								price={item.sellingPrice}
+								price={item.originalPrice ?? item.sellingPrice}
+								originalPrice={item.originalPrice ?? null}
+								sellingPrice={item.sellingPrice}
 								imageUrl={Array.isArray(item.imageUrls) ? String(item.imageUrls[0] ?? "") : ""}
 								orderDeadline={item.orderDeadline}
 								listingDate={item.listingDate}

@@ -34,7 +34,11 @@ export async function runAnismileSyncJob(syncLogId: string) {
 				franchise: item.franchise,
 				janCode: item.janCode,
 				releaseDate: item.releaseDate,
+				sourceAuthState: item.sourceAuthState,
 			})),
+			{
+				markMissingOutOfStock: false,
+			},
 		);
 
 		await finishSyncLog({

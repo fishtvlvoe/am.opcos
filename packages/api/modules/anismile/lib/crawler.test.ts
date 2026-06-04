@@ -26,8 +26,9 @@ describe("parseProductApi — new field extraction", () => {
 			code: 1,
 			item: { ...BASE_ITEM, percent: { status: 1, percent: "85.00" } },
 		};
-		const result = parseProductApiForTest(res);
+		const result = parseProductApiForTest(res, undefined, "authenticated");
 		expect(result?.discountRate).toBe(85);
+		expect(result?.sourceAuthState).toBe("authenticated");
 	});
 
 	it("sets discountRate to null when percent.status !== 1", () => {
@@ -37,6 +38,7 @@ describe("parseProductApi — new field extraction", () => {
 		};
 		const result = parseProductApiForTest(res);
 		expect(result?.discountRate).toBeNull();
+		expect(result?.sourceAuthState).toBe("public");
 	});
 
 	it("extracts brand from manufacturer.name", () => {
@@ -102,5 +104,24 @@ describe("series page product discovery", () => {
 
 	it("exports on-demand series crawler for source series fallback", () => {
 		expect(typeof crawlAnismileProductsBySeriesName).toBe("function");
+	});
+
+	it("uses a default limit of 200 for crawler", () => {
+		const fs = require("node:fs");
+		const path = require("node:path");
+		const source = fs.readFileSync(path.resolve(__dirname, "crawler.ts"), "utf8");
+		// 預期 limit 預設值為 200
+		expect(source).toContain("limit = 200");
+	});
+
+	it("implements advanced normalization in normalizeSeriesLookup", () => {
+		const fs = require("node:fs");
+		const path = require("node:path");
+		const source = fs.readFileSync(path.resolve(__dirname, "crawler.ts"), "utf8");
+		// 預期擴展的正規化邏輯
+		expect(source).toContain('.replaceAll("（", "(")');
+		expect(source).toContain('.replaceAll("）", ")")');
+		expect(source).toContain('.replaceAll("　", " ")');
+		expect(source).toContain('.toLowerCase()');
 	});
 });

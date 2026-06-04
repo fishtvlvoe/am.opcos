@@ -40,11 +40,11 @@ describe("TableView 表格模式結構契約", () => {
 		expect(source).toContain("價格");
 	});
 
-	it("包含折扣率欄位標頭", () => {
+	it("包含會員價欄位標頭", () => {
 		const source = read(
 			"modules/catalog/components/TableView.tsx",
 		);
-		expect(source).toContain("折扣率");
+		expect(source).toContain("會員價");
 	});
 
 	it("包含 JAN 條碼欄位標頭", () => {

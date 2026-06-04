@@ -18,10 +18,13 @@ type OrderCardProps = {
 	totalAmount: number;
 	createdAt: Date | string;
 	itemCount: number;
+	images?: string[];
 };
 
-export function OrderCard({ id, status, totalAmount, createdAt, itemCount }: OrderCardProps) {
+export function OrderCard({ id, status, totalAmount, createdAt, itemCount, images = [] }: OrderCardProps) {
 	const meta = statusMeta[status] ?? statusMeta.pending;
+	const displayImages = images.slice(0, 3);
+	const remainCount = Math.max(0, images.length - 3);
 	return (
 		<Link href={`/orders/${id}`} className="card-hover block rounded-xl border border-stone-200 bg-white p-4">
 			<div className="flex items-start justify-between gap-3">
@@ -30,6 +33,29 @@ export function OrderCard({ id, status, totalAmount, createdAt, itemCount }: Ord
 					<p className="mt-1 text-sm text-stone-600">{format(new Date(createdAt), "yyyy/MM/dd")}</p>
 				</div>
 				<span className={cn("rounded-full px-2.5 py-1 text-xs font-medium", meta.className)}>{meta.label}</span>
+			</div>
+
+			<div className="mt-3 flex items-center gap-2">
+				{displayImages.length > 0 ? (
+					<>
+						{displayImages.map((src, index) => (
+							<img
+								key={`${id}-${src}-${index}`}
+								src={src}
+								alt=""
+								className="h-8 w-8 rounded-md border border-stone-200 object-cover"
+								loading="lazy"
+							/>
+						))}
+						{remainCount > 0 ? (
+							<span className="rounded-md border border-stone-200 px-2 py-1 text-xs text-stone-500">
+								+{remainCount}
+							</span>
+						) : null}
+					</>
+				) : (
+					<span className="text-xs text-stone-400">無商品圖片</span>
+				)}
 			</div>
 
 			<div className="mt-4 flex items-center justify-between text-sm">

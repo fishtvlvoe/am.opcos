@@ -6,6 +6,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
+import { PriceDisplay } from "./PriceDisplay";
+
 type FeaturedProduct = {
 	id: string;
 	title: string;
@@ -75,21 +77,10 @@ export function FeaturedCarousel({ products }: FeaturedCarouselProps) {
 								</div>
 								<div className="space-y-1 p-3">
 									<p className="line-clamp-2 text-sm font-medium leading-5 text-stone-800">{p.title}</p>
-									<div className="flex items-center gap-2">
-										{p.originalPrice && (
-											<span className="text-xs text-stone-500 line-through">¥{p.originalPrice}</span>
-										)}
-									</div>
-									<div className="flex items-center gap-2 text-sm">
-										<span className="font-semibold text-stone-900">
-											{p.sellingPrice === null ? "登入查看價格" : `¥${p.sellingPrice}`}
-										</span>
-										{p.discountRate && (
-											<span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-												{Math.round(p.discountRate * 100)}折
-											</span>
-										)}
-									</div>
+									<PriceDisplay
+										originalPrice={p.originalPrice}
+										memberPrice={p.sellingPrice}
+									/>
 								</div>
 							</div>
 						</Link>

@@ -4,28 +4,65 @@ import { orpc } from "@shared/lib/orpc-query-utils";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AnnouncementBanner } from "./components/AnnouncementBanner";
 import { CategoryNav } from "./components/CategoryNav";
 import { DeadlineSection } from "./components/DeadlineSection";
 import { FranchiseBanner } from "./components/FranchiseBanner";
 import { HotSearchTags } from "./components/HotSearchTags";
 import { SeriesCard } from "../catalog/components/SeriesCard";
+import { InstockSection } from "./components/InstockSection";
+
+export type HomePageSeriesData = {
+	items: Array<{
+		id: string;
+		name: string;
+		imageUrl: string;
+		productCount: number;
+		workTitle: string;
+		manufacturer: string;
+		latestAddTime: number | null;
+	}>;
+	availableDates: Array<{ date: string; display: string; count: number }>;
+	targetDate: string | null;
+};
+
+export type HomePageBannerData = {
+	banners: Array<{
+		name?: string;
+		imageUrl: string;
+		linkUrl?: string;
+		copyrightText?: string;
+		copyrightColor?: string;
+	}>;
+};
 
 // ─── 日期 Tab + 系列卡片 Grid ─────────────────────────────────────────────────
 
-function ListingSection() {
+function ListingSection({ initialSeriesData }: { initialSeriesData?: HomePageSeriesData }) {
 	const [selectedDateIndex, setSelectedDateIndex] = useState(0);
+	const [visibleSeriesData, setVisibleSeriesData] = useState<HomePageSeriesData | undefined>(initialSeriesData);
 	const seriesQuery = useQuery(orpc.anismile.homepage.getSeriesList.queryOptions({
 		input: { dateIndex: selectedDateIndex, limit: 30 },
 	}));
-	const seriesList = seriesQuery.data?.items ?? [];
-	const dates = seriesQuery.data?.availableDates ?? [];
+	const currentSeriesData = seriesQuery.data ?? visibleSeriesData;
+	const seriesList = currentSeriesData?.items ?? [];
+	const dates = currentSeriesData?.availableDates ?? [];
+	const isUpdatingSeries = seriesQuery.isFetching && !!currentSeriesData;
+
+	useEffect(() => {
+		if (seriesQuery.data) {
+			setVisibleSeriesData(seriesQuery.data);
+		}
+	}, [seriesQuery.data]);
 
 	return (
 		<section className="mb-12">
 			<div className="mb-4 flex items-center justify-between gap-4">
-				<h2 className="text-lg font-bold text-stone-900">商品系列</h2>
+				<div className="flex items-center gap-3">
+					<h2 className="text-lg font-bold text-stone-900">商品系列</h2>
+					{isUpdatingSeries ? <span className="text-xs text-stone-500">更新中...</span> : null}
+				</div>
 				<Link
 					href="/search"
 					className="text-sm font-medium text-primary hover:text-primary/80 hover:underline"
@@ -50,7 +87,7 @@ function ListingSection() {
 				))}
 			</div>
 
-			{seriesQuery.isPending ? (
+			{seriesQuery.isPending && !currentSeriesData ? (
 				<div className="py-12 text-center text-muted-foreground">載入中...</div>
 			) : seriesList.length === 0 ? (
 				<p className="text-sm text-stone-500">暫無商品</p>
@@ -100,11 +137,20 @@ function Footer() {
 
 // ─── 首頁 ──────────────────────────────────────────────────────────────────────
 
-export function HomePage() {
+export function HomePage({
+	initialBannerData,
+	initialSeriesData,
+	initialDeadlineData,
+}: {
+	initialBannerData?: HomePageBannerData;
+	initialSeriesData?: HomePageSeriesData;
+	initialDeadlineData?: { items: any[] };
+}) {
 	const sourceBannerQuery = useQuery(orpc.anismile.homepage.getBanners.queryOptions({
 		input: {},
 	}));
-	const sourceBannerItems = (sourceBannerQuery.data?.banners ?? [])
+	const bannerData = sourceBannerQuery.data ?? initialBannerData;
+	const sourceBannerItems = (bannerData?.banners ?? [])
 		.map((banner) => ({
 			name: banner.name ?? "AniSmile banner",
 			image: banner.imageUrl,
@@ -119,10 +165,12 @@ export function HomePage() {
 			<AnnouncementBanner helpUrl="#" />
 			<CategoryNav />
 			<main className="container py-8">
+				<h1 className="sr-only">Anismile 玩具模型與動漫周邊上架與現貨平台</h1>
 				<FranchiseBanner items={sourceBannerItems} />
-				<ListingSection />
+				<ListingSection initialSeriesData={initialSeriesData} />
 				<HotSearchTags />
-				<DeadlineSection />
+				<DeadlineSection initialData={initialDeadlineData} />
+				<InstockSection />
 			</main>
 			<Footer />
 		</div>

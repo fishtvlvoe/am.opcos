@@ -27,9 +27,6 @@
 	],
 	"exclude": [
 		"node_modules",
-		"packages/flowgo-*",
-		"packages/fishkit-*",
-		"packages/puppeteer",
 		"**/*.test.ts",
 		"**/*.test.tsx",
 		"**/__tests__/**",

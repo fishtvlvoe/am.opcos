@@ -44,7 +44,7 @@ describe("protectedProcedure", () => {
 	});
 
 	it("passes user and session to context when authenticated", async () => {
-		const mockUser = { id: "user-1", role: "user", name: "Test User" };
+		const mockUser = { id: "user-1", role: "customer", name: "Test User" };
 		const mockSession = { id: "session-1", userId: "user-1" };
 		vi.mocked(auth.api.getSession).mockResolvedValue({
 			user: mockUser,
@@ -75,7 +75,7 @@ describe("adminProcedure", () => {
 
 	it("throws FORBIDDEN when user role is not admin", async () => {
 		vi.mocked(auth.api.getSession).mockResolvedValue({
-			user: { id: "user-1", role: "user" },
+			user: { id: "user-1", role: "customer" },
 			session: { id: "session-1" },
 		} as never);
 

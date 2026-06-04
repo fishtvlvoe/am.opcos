@@ -87,6 +87,7 @@ export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
 				series: seriesId,
 				page,
 				pageSize,
+				showUnavailable: true,
 				inStock: inStockFilter || undefined,
 				urgentDeadline: urgentFilter || undefined,
 			},
@@ -94,6 +95,7 @@ export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
 	);
 
 	const products = productsQuery.data?.items ?? [];
+	const totalProducts = productsQuery.data?.total ?? products.length;
 	const totalPages = productsQuery.data?.totalPages ?? 1;
 
 	const seriesName = useMemo(() => {
@@ -126,8 +128,7 @@ export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
 			title: p.titleTranslated || p.titleOriginal,
 			imageUrl: Array.isArray(p.imageUrls) ? String(p.imageUrls[0] ?? "") : null,
 			sellingPrice: p.sellingPrice,
-			originalPrice: null,
-			discountRate: null,
+			originalPrice: p.originalPrice ?? null,
 		}));
 	}, [products]);
 
@@ -154,7 +155,7 @@ export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
 				<Breadcrumb seriesName={seriesName} />
 
 				<h1 className="mb-1 text-2xl font-bold text-stone-900">{seriesName}</h1>
-				<p className="mb-6 text-sm text-stone-500">{products.length} 件商品</p>
+				<p className="mb-6 text-sm text-stone-500">{totalProducts} 件商品</p>
 
 				<FeaturedCarousel products={featuredProducts} />
 
@@ -185,7 +186,9 @@ export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
 								key={item.id}
 								id={item.id}
 								title={item.titleTranslated || item.titleOriginal}
-								price={item.sellingPrice}
+								price={item.originalPrice ?? item.sellingPrice}
+								originalPrice={item.originalPrice ?? null}
+								sellingPrice={item.sellingPrice}
 								imageUrl={Array.isArray(item.imageUrls) ? String(item.imageUrls[0] ?? "") : ""}
 								orderDeadline={item.orderDeadline}
 								listingDate={item.listingDate}
@@ -208,6 +211,7 @@ export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
 						products={products.map((item) => ({
 							id: item.id,
 							title: item.titleTranslated || item.titleOriginal,
+							originalPrice: item.originalPrice ?? null,
 							sellingPrice: item.sellingPrice,
 							orderDeadline: item.orderDeadline,
 						}))}

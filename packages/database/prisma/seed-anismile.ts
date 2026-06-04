@@ -3,18 +3,18 @@ import { db } from "./client";
 async function main() {
 	await db.anismileSetting.upsert({
 		where: {
-			key: "default_markup",
+			key: "default_backsolve_percent",
 		},
 		create: {
-			key: "default_markup",
-			value: "1.2",
+			key: "default_backsolve_percent",
+			value: "0",
 		},
 		update: {
-			value: "1.2",
+			value: "0",
 		},
 	});
 
-	console.log("seed-anismile: ensured default_markup=1.2");
+	console.log("seed-anismile: ensured default_backsolve_percent=0");
 }
 
 main()

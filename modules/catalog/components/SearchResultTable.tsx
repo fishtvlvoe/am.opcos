@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 
+import { PriceDisplay } from "./PriceDisplay";
+
 type SearchResultTableProduct = {
 	id: string;
 	titleTranslated?: string | null;
@@ -9,6 +11,7 @@ type SearchResultTableProduct = {
 	janCode?: string | null;
 	series?: string | null;
 	brand?: string | null;
+	originalPrice?: number | null;
 	sellingPrice?: number | null;
 	inStock?: boolean | null;
 	orderDeadline?: Date | string | null;
@@ -32,7 +35,7 @@ export function SearchResultTable({ products }: { products: SearchResultTablePro
 						<th className="px-3 py-2.5 text-left font-medium">JAN Code</th>
 						<th className="px-3 py-2.5 text-left font-medium">作品系列</th>
 						<th className="px-3 py-2.5 text-left font-medium">品牌</th>
-						<th className="px-3 py-2.5 text-right font-medium">售價</th>
+						<th className="px-3 py-2.5 text-right font-medium">價格</th>
 						<th className="px-3 py-2.5 text-center font-medium">庫存狀態</th>
 						<th className="px-3 py-2.5 text-center font-medium">截止日期</th>
 					</tr>
@@ -48,8 +51,12 @@ export function SearchResultTable({ products }: { products: SearchResultTablePro
 							<td className="px-3 py-2.5 text-stone-600">{product.janCode || "-"}</td>
 							<td className="px-3 py-2.5 text-stone-600">{product.series || "-"}</td>
 							<td className="px-3 py-2.5 text-stone-600">{product.brand || "-"}</td>
-							<td className="px-3 py-2.5 text-right font-medium text-stone-900">
-								{product.sellingPrice == null ? "登入查看價格" : `¥${product.sellingPrice}`}
+							<td className="px-3 py-2.5 text-right">
+								<PriceDisplay
+									originalPrice={product.originalPrice}
+									memberPrice={product.sellingPrice}
+									align="right"
+								/>
 							</td>
 							<td className="px-3 py-2.5 text-center">
 								<span className={product.inStock ? "text-emerald-700" : "text-stone-500"}>

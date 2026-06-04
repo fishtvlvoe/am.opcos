@@ -34,8 +34,15 @@ describe("DeadlineSection 元件", () => {
 		expect(source).toContain("text-red");
 	});
 
-	it("即將截單區塊直接顯示商品卡，讓未登入客戶也能看到商品", () => {
+	it("uses getDeadlineList instead of getDeadlineProducts", () => {
 		const source = read(filePath);
-		expect(source).toContain("ProductCard");
+		expect(source).toContain("getDeadlineList");
+		expect(source).not.toContain("getDeadlineProducts");
+	});
+
+	it("implements series card links instead of ProductCard", () => {
+		const source = read(filePath);
+		expect(source).not.toContain("ProductCard");
+		expect(source).toContain("/search?series=");
 	});
 });

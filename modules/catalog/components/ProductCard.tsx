@@ -10,6 +10,7 @@ import { useState } from "react";
 
 import { StockBadge } from "../../shared/components/StockBadge";
 import { DeadlineBadge } from "./DeadlineBadge";
+import { PriceDisplay } from "./PriceDisplay";
 
 type ProductCardProps = {
 	id: string;
@@ -17,7 +18,6 @@ type ProductCardProps = {
 	price: number | null;
 	originalPrice?: number | null;
 	sellingPrice?: number | null;
-	discountRate?: number | null;
 	saleStatus?: string | null;
 	imageUrl?: string | null;
 	orderDeadline?: Date | string | null;
@@ -47,7 +47,6 @@ export function ProductCard({
 	price,
 	originalPrice,
 	sellingPrice,
-	discountRate,
 	saleStatus,
 	imageUrl,
 	orderDeadline,
@@ -65,8 +64,9 @@ export function ProductCard({
 	const [isFavorited, setIsFavorited] = useState(wishlisted ?? false);
 	const listingLabel = listingDate ? format(new Date(listingDate), "M/d") : null;
 	const isNewProduct = listingDate ? (Date.now() - new Date(listingDate).getTime()) / (1000 * 60 * 60 * 24) <= 7 : false;
-	const currentSellingPrice = sellingPrice ?? price;
-	const canOrder = !!user && currentSellingPrice !== null;
+	const publicOriginalPrice = originalPrice ?? price;
+	const memberPrice = sellingPrice ?? null;
+	const canOrder = !!user && memberPrice !== null;
 	const isPastDeadline = orderDeadline ? new Date(orderDeadline).getTime() < Date.now() : false;
 	const daysLeft = orderDeadline ? differenceInCalendarDays(new Date(orderDeadline), new Date()) : null;
 	const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft <= 7;
@@ -112,23 +112,7 @@ export function ProductCard({
 
 				<div className="space-y-2 p-3">
 					<p className="line-clamp-2 text-sm leading-5 text-stone-800">{title}</p>
-					<div className="space-y-1">
-						{originalPrice !== null && originalPrice !== undefined ? (
-							<p className="text-sm text-muted-foreground line-through">¥ {originalPrice.toFixed(2)}</p>
-						) : null}
-						<div className="flex items-center gap-2">
-							{currentSellingPrice === null ? (
-								<p className="font-semibold text-sm text-stone-600">登入查看價格</p>
-							) : (
-								<p className="font-bold text-base text-stone-900">¥ {currentSellingPrice.toFixed(2)}</p>
-							)}
-							{discountRate !== null && discountRate !== undefined ? (
-								<span className="inline-flex items-center rounded-md bg-red-100 px-1.5 py-0.5 text-[11px] font-medium text-red-700">
-									{Math.round(discountRate * 100)}折
-								</span>
-							) : null}
-						</div>
-					</div>
+					<PriceDisplay originalPrice={publicOriginalPrice} memberPrice={memberPrice} />
 					<div className="flex items-center justify-between">
 						{normalizedSaleStatus ? (
 							<span

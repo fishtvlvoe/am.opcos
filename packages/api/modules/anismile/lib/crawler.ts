@@ -23,6 +23,7 @@ export type CrawledAnismileProduct = {
 	franchise: string | null;
 	janCode: string | null;
 	releaseDate: Date | null;
+	sourceAuthState: "authenticated" | "public";
 };
 
 export type AnismileCrawlResult = {
@@ -160,6 +161,29 @@ async function getAuthenticatedCookie(): Promise<string> {
 	return setCookie.map((item) => item.split(";")[0]).join("; ");
 }
 
+type CrawlAuthMode = "authenticated" | "public";
+
+type CrawlProductOptions = {
+	authMode?: CrawlAuthMode;
+};
+
+async function fetchSourceProductBySupplierId(
+	supplierId: string,
+	{ authMode = "authenticated" }: CrawlProductOptions = {},
+): Promise<AnismileProductResponse> {
+	const headers: Record<string, string> = {
+		"content-type": "application/x-www-form-urlencoded",
+	};
+	if (authMode === "authenticated") {
+		headers.cookie = await getAuthenticatedCookie();
+	}
+	return await fetchJson<AnismileProductResponse>(PRODUCT_API_URL, {
+		method: "POST",
+		headers,
+		body: new URLSearchParams({ item: supplierId, lang: "cn" }),
+	});
+}
+
 async function getProductIds(): Promise<string[]> {
 	const rootSitemap = await fetchText(SITEMAP_URL);
 	const isSitemapIndex = rootSitemap.includes("<sitemapindex");
@@ -232,11 +256,23 @@ async function getHomepageProductEntries(): Promise<ProductEntry[]> {
 }
 
 function normalizeSeriesLookup(value: string) {
-	return value.replaceAll("截單", "截单").replaceAll("！", "!").trim();
+	return value
+		.replaceAll("截單", "截单")
+		.replaceAll("！", "!")
+		.replaceAll("（", "(")
+		.replaceAll("）", ")")
+		.replaceAll("　", " ")
+		.toLowerCase()
+		.trim();
 }
 
-export async function crawlAnismileProductsBySeriesName(seriesName: string, limit = 60): Promise<CrawledAnismileProduct[]> {
+export async function crawlAnismileProductsBySeriesName(
+	seriesName: string,
+	limit = 200,
+	{ authMode = "authenticated" }: CrawlProductOptions = {},
+): Promise<CrawledAnismileProduct[]> {
 	const sourceSeriesName = normalizeSeriesLookup(seriesName);
+	const cookie = authMode === "authenticated" ? await getAuthenticatedCookie() : null;
 	const payloads = await Promise.all(
 		Array.from({ length: 7 }, (_, dateIndex) => fetchJson<SourceSeriesListResponse>(`${SERIES_LIST_URL}?lang=en&dateIndex=${dateIndex}`)),
 	);
@@ -255,10 +291,13 @@ export async function crawlAnismileProductsBySeriesName(seriesName: string, limi
 	for (const { id, listingDate } of productEntries) {
 		const res = await fetchJson<AnismileProductResponse>(PRODUCT_API_URL, {
 			method: "POST",
-			headers: { "content-type": "application/x-www-form-urlencoded" },
+			headers: {
+				"content-type": "application/x-www-form-urlencoded",
+				...(cookie ? { cookie } : {}),
+			},
 			body: new URLSearchParams({ item: id, lang: "cn" }),
 		});
-		const parsed = parseProductApi(res, id);
+		const parsed = parseProductApi(res, id, authMode);
 		if (parsed) {
 			parsed.listingDate ??= listingDate;
 			products.push(parsed);
@@ -268,13 +307,12 @@ export async function crawlAnismileProductsBySeriesName(seriesName: string, limi
 	return products;
 }
 
-export async function crawlAnismileProductBySupplierId(supplierId: string): Promise<CrawledAnismileProduct | null> {
-	const res = await fetchJson<AnismileProductResponse>(PRODUCT_API_URL, {
-		method: "POST",
-		headers: { "content-type": "application/x-www-form-urlencoded" },
-		body: new URLSearchParams({ item: supplierId, lang: "cn" }),
-	});
-	return parseProductApi(res, supplierId);
+export async function crawlAnismileProductBySupplierId(
+	supplierId: string,
+	{ authMode = "authenticated" }: CrawlProductOptions = {},
+): Promise<CrawledAnismileProduct | null> {
+	const res = await fetchSourceProductBySupplierId(supplierId, { authMode });
+	return parseProductApi(res, supplierId, authMode);
 }
 
 type AnismileProductResponse = {
@@ -283,7 +321,8 @@ type AnismileProductResponse = {
 		hash: string;
 		name: string;
 		price: string;
-		percent: { status: number; percent: string } | null;
+		percent: { status: number; percent: string; debug?: string } | null;
+		price_percent?: string | number | null;
 		status?: number;
 		is_stocked?: number;
 		stocked_number?: number;
@@ -301,7 +340,11 @@ type AnismileProductResponse = {
 	};
 };
 
-function parseProductApi(res: AnismileProductResponse, productId?: string): CrawledAnismileProduct | null {
+function parseProductApi(
+	res: AnismileProductResponse,
+	productId?: string,
+	sourceAuthState: CrawlAuthMode = "public",
+): CrawledAnismileProduct | null {
 	if (res.code !== 1 || !res.item) return null;
 
 	const item = res.item;
@@ -356,6 +399,7 @@ function parseProductApi(res: AnismileProductResponse, productId?: string): Craw
 		franchise,
 		janCode,
 		releaseDate,
+		sourceAuthState,
 	};
 }
 

@@ -86,6 +86,7 @@ export async function runSync(): Promise<SyncResult> {
 				franchise: item.franchise,
 				janCode: item.janCode,
 				releaseDate: item.releaseDate,
+				sourceAuthState: item.sourceAuthState,
 			})),
 			{
 				markMissingOutOfStock: false,
@@ -124,6 +125,7 @@ export async function runSync(): Promise<SyncResult> {
 				franchise: item.franchise,
 				janCode: item.janCode,
 				releaseDate: item.releaseDate,
+				sourceAuthState: item.sourceAuthState,
 			})),
 			{
 				markMissingOutOfStock: false,

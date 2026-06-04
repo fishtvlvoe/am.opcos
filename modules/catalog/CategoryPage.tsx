@@ -174,7 +174,7 @@ export function CategoryPage({ slug }: { slug: string }) {
 										<TableRow>
 											<TableHead className="w-14">縮圖</TableHead>
 											<TableHead>商品名</TableHead>
-											<TableHead className="w-28">批發價</TableHead>
+											<TableHead className="w-40">價格</TableHead>
 											<TableHead className="w-24">狀態</TableHead>
 											<TableHead className="w-32">截止日期</TableHead>
 										</TableRow>
@@ -198,8 +198,22 @@ export function CategoryPage({ slug }: { slug: string }) {
 															{title}
 														</Link>
 													</TableCell>
-													<TableCell>
-														{item.sellingPrice === null ? "登入查看價格" : `¥ ${Number(item.sellingPrice).toFixed(2)}`}
+													<TableCell className="text-right">
+														<div className="space-y-0.5">
+															{item.originalPrice != null && item.sellingPrice != null && item.sellingPrice < item.originalPrice ? (
+																<p className="text-xs text-stone-500 line-through">¥ {Number(item.originalPrice).toFixed(2)}</p>
+															) : null}
+															<p className="font-medium text-stone-900">
+																{item.originalPrice != null || item.sellingPrice != null
+																	? `¥ ${Number(item.originalPrice ?? item.sellingPrice).toFixed(2)}`
+																	: "價格未提供"}
+															</p>
+															{item.sellingPrice === null ? (
+																<p className="text-xs text-stone-500">登入查看會員價</p>
+															) : item.originalPrice != null && item.sellingPrice < item.originalPrice ? (
+																<p className="text-xs text-stone-600">會員價 ¥ {Number(item.sellingPrice).toFixed(2)}</p>
+															) : null}
+														</div>
 													</TableCell>
 													<TableCell>
 														{inStock === undefined ? "-" : inStock ? "有庫存" : "無庫存"}
@@ -220,7 +234,9 @@ export function CategoryPage({ slug }: { slug: string }) {
 										key={item.id}
 										id={item.id}
 										title={item.titleTranslated || item.titleOriginal}
-										price={item.sellingPrice}
+										price={item.originalPrice ?? item.sellingPrice}
+										originalPrice={item.originalPrice ?? null}
+										sellingPrice={item.sellingPrice}
 										imageUrl={Array.isArray(item.imageUrls) ? String(item.imageUrls[0] ?? "") : ""}
 										orderDeadline={item.orderDeadline}
 										listingDate={item.listingDate}

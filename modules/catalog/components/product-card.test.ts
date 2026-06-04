@@ -34,4 +34,13 @@ describe("ProductCard implementation contract", () => {
 			source.includes("isUrgent");
 		expect(hasUrgencyCalc).toBe(true);
 	});
+
+	it("公開原價、登入後會員價的價格提示存在", () => {
+		const source = readFileSync(
+			resolve(process.cwd(), "modules/catalog/components/PriceDisplay.tsx"),
+			"utf8",
+		);
+		expect(source).toContain("登入查看會員價");
+		expect(source).toContain("memberPrice");
+	});
 });

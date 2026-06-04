@@ -1,8 +1,9 @@
 import { db } from "../client";
 import { Prisma } from "../generated/client";
+import { calculateBacksolveSellingPrice } from "./backsolve-pricing";
 
-const DEFAULT_MARKUP_KEY = "default_markup";
-const DEFAULT_MARKUP_VALUE = "1.2";
+const DEFAULT_BACKSOLVE_PERCENT_KEY = "default_backsolve_percent";
+const DEFAULT_BACKSOLVE_PERCENT_VALUE = "0";
 const SYNC_CURSOR_KEY = "sync.cursor";
 const ADMIN_LINE_UID_KEY = "notifications.adminLineUid";
 const ADMIN_ORDER_EMAILS_KEY = "notifications.adminOrderEmails";
@@ -35,34 +36,25 @@ export type ProductSyncInput = {
 	franchise?: string | null;
 	janCode?: string | null;
 	releaseDate?: Date | null;
+	sourceAuthState?: "authenticated" | "public";
 };
 
-export function calculateSellingPrice({
-	costPrice,
-	markup,
-}: {
-	costPrice: Prisma.Decimal;
-	markup: Prisma.Decimal;
-}) {
-	return costPrice.mul(markup).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
-}
-
-export async function ensureDefaultMarkupSetting() {
+export async function ensureDefaultBacksolvePercentSetting() {
 	return await db.anismileSetting.upsert({
 		where: {
-			key: DEFAULT_MARKUP_KEY,
+			key: DEFAULT_BACKSOLVE_PERCENT_KEY,
 		},
 		create: {
-			key: DEFAULT_MARKUP_KEY,
-			value: DEFAULT_MARKUP_VALUE,
+			key: DEFAULT_BACKSOLVE_PERCENT_KEY,
+			value: DEFAULT_BACKSOLVE_PERCENT_VALUE,
 		},
 		update: {},
 	});
 }
 
-export async function getDefaultMarkup() {
-	const setting = await ensureDefaultMarkupSetting();
-	return new Prisma.Decimal(setting.value || DEFAULT_MARKUP_VALUE);
+export async function getDefaultBacksolvePercent() {
+	const setting = await ensureDefaultBacksolvePercentSetting();
+	return new Prisma.Decimal(setting.value || DEFAULT_BACKSOLVE_PERCENT_VALUE);
 }
 
 export function parseRecipientList(value: string | null | undefined) {
@@ -286,9 +278,25 @@ export async function listAnismileProducts({
 				seriesRoot.replaceAll("！", "!"),
 			].filter(Boolean)),
 		);
-		andConditions.push({
-			OR: seriesTerms.map((term) => ({ series: { startsWith: term } })),
+		const exactSeriesMatch = await db.anismileProduct.findFirst({
+			where: {
+				series: {
+					in: seriesTerms,
+				},
+			},
+			select: { id: true },
 		});
+		andConditions.push(
+			exactSeriesMatch
+				? {
+						series: {
+							in: seriesTerms,
+						},
+					}
+				: {
+						OR: seriesTerms.map((term) => ({ series: { startsWith: term } })),
+					},
+		);
 	}
 
 	const where: Prisma.AnismileProductWhereInput = {
@@ -397,7 +405,9 @@ export async function setProductMarkupOverride({
 		where: { id: productId },
 		select: {
 			id: true,
+			originalPrice: true,
 			costPrice: true,
+			sellingPrice: true,
 		},
 	});
 
@@ -405,12 +415,17 @@ export async function setProductMarkupOverride({
 		throw new Error("Product not found");
 	}
 
-	const defaultMarkup = await getDefaultMarkup();
-	const effectiveMarkup = markupOverride === null ? defaultMarkup : new Prisma.Decimal(markupOverride);
-	const sellingPrice = calculateSellingPrice({
-		costPrice: product.costPrice,
-		markup: effectiveMarkup,
-	});
+	const defaultBacksolvePercent = await getDefaultBacksolvePercent();
+	const effectiveBacksolvePercent =
+		markupOverride === null ? defaultBacksolvePercent : new Prisma.Decimal(markupOverride);
+	const sellingPrice =
+		product.originalPrice && product.originalPrice.gt(0)
+			? calculateBacksolveSellingPrice({
+					originalPrice: product.originalPrice,
+					costPrice: product.costPrice,
+					backsolvePercent: effectiveBacksolvePercent,
+				})
+			: product.sellingPrice;
 
 	return await db.anismileProduct.update({
 		where: { id: productId },
@@ -421,54 +436,48 @@ export async function setProductMarkupOverride({
 	});
 }
 
-export async function setDefaultMarkup({
-	markup,
+export async function setDefaultBacksolvePercent({
+	backsolvePercent,
 }: {
-	markup: number;
+	backsolvePercent: number;
 }) {
-	const markupDecimal = new Prisma.Decimal(markup);
+	const backsolvePercentDecimal = new Prisma.Decimal(backsolvePercent);
 
 	await db.anismileSetting.upsert({
 		where: {
-			key: DEFAULT_MARKUP_KEY,
+			key: DEFAULT_BACKSOLVE_PERCENT_KEY,
 		},
 		create: {
-			key: DEFAULT_MARKUP_KEY,
-			value: markupDecimal.toString(),
+			key: DEFAULT_BACKSOLVE_PERCENT_KEY,
+			value: backsolvePercentDecimal.toString(),
 		},
 		update: {
-			value: markupDecimal.toString(),
+			value: backsolvePercentDecimal.toString(),
 		},
 	});
 
-	const products = await db.anismileProduct.findMany({
-		select: {
-			id: true,
-			costPrice: true,
-			markupOverride: true,
-		},
-	});
-
-	const chunkSize = 100;
-	for (let i = 0; i < products.length; i += chunkSize) {
-		const chunk = products.slice(i, i + chunkSize);
-		await db.$transaction(
-			chunk.map((product) => {
-				const effectiveMarkup = product.markupOverride ?? markupDecimal;
-				const sellingPrice = calculateSellingPrice({
-					costPrice: product.costPrice,
-					markup: effectiveMarkup,
-				});
-				return db.anismileProduct.update({
-					where: { id: product.id },
-					data: { sellingPrice },
-				});
-			}),
-		);
-	}
+	// Recompute in one SQL statement so production-sized catalogs do not block on
+	// tens of thousands of row-by-row Prisma updates.
+	await db.$executeRaw`
+		UPDATE "anismile_products"
+		SET
+			"selling_price" = CASE
+				WHEN "original_price" IS NOT NULL AND "original_price" > 0 THEN
+					ROUND(
+						"original_price" * LEAST(
+							1,
+							("cost_price" / NULLIF("original_price", 0)) + (COALESCE("markup_override", ${backsolvePercentDecimal}) / 100.0)
+						),
+						2
+					)
+				ELSE "selling_price"
+			END,
+			"updated_at" = NOW()
+		WHERE "price_manual_override" = false
+	`;
 
 	return {
-		markup: markupDecimal,
+		backsolvePercent: backsolvePercentDecimal,
 	};
 }
 
@@ -532,7 +541,7 @@ export async function upsertProductsFromSync(
 	} = {},
 ) {
 	const { markMissingOutOfStock = true, transactionTimeoutMs = 60_000 } = options;
-	const defaultMarkup = await getDefaultMarkup();
+	const defaultBacksolvePercent = await getDefaultBacksolvePercent();
 	const now = new Date();
 	const supplierIds = products.map((item) => item.supplierId);
 
@@ -548,22 +557,50 @@ export async function upsertProductsFromSync(
 				},
 				select: {
 					id: true,
+					originalPrice: true,
+					costPrice: true,
+					discountRate: true,
+					sourceUrl: true,
 					markupOverride: true,
 					listingDate: true,
 					priceManualOverride: true,
 				},
 			});
 
-			const costPrice = new Prisma.Decimal(product.costPrice);
+			const hasAuthenticatedSourcePricing = product.sourceAuthState === "authenticated";
+			const preserveExistingSourcePricingTruth =
+				Boolean(existing) &&
+				!hasAuthenticatedSourcePricing &&
+				(existing?.discountRate != null || existing?.sourceUrl != null);
+			const originalPrice =
+				preserveExistingSourcePricingTruth && existing?.originalPrice !== null && existing?.originalPrice !== undefined
+					? existing.originalPrice
+					: product.originalPrice === null || product.originalPrice === undefined
+						? null
+						: new Prisma.Decimal(product.originalPrice);
+			const costPrice =
+				preserveExistingSourcePricingTruth && existing?.costPrice != null
+					? existing.costPrice
+					: new Prisma.Decimal(product.costPrice);
+			const discountRate =
+				preserveExistingSourcePricingTruth && existing?.discountRate !== null && existing?.discountRate !== undefined
+					? existing.discountRate
+					: product.discountRate != null
+						? new Prisma.Decimal(product.discountRate / 100)
+						: null;
 			const markupOverride =
 				product.markupOverride === null || product.markupOverride === undefined
 					? null
 					: new Prisma.Decimal(product.markupOverride);
-			const effectiveMarkup = markupOverride ?? existing?.markupOverride ?? defaultMarkup;
-			const sellingPrice = calculateSellingPrice({
-				costPrice,
-				markup: effectiveMarkup,
-			});
+			const effectiveBacksolvePercent = markupOverride ?? existing?.markupOverride ?? defaultBacksolvePercent;
+			const sellingPrice =
+				originalPrice && originalPrice.gt(0)
+					? calculateBacksolveSellingPrice({
+							originalPrice,
+							costPrice,
+							backsolvePercent: effectiveBacksolvePercent,
+						})
+					: existing?.costPrice ?? costPrice;
 			const inStock =
 				product.inStock ??
 				(product.stockQuantity != null ? product.stockQuantity > 0 : true);
@@ -582,10 +619,7 @@ export async function upsertProductsFromSync(
 					imageUrls: product.imageUrls,
 					category: product.category,
 					series: product.series,
-					originalPrice:
-						product.originalPrice === null || product.originalPrice === undefined
-							? null
-							: new Prisma.Decimal(product.originalPrice),
+					originalPrice,
 					costPrice,
 					markupOverride,
 					sellingPrice,
@@ -594,7 +628,7 @@ export async function upsertProductsFromSync(
 					inStock,
 					stockQuantity: product.stockQuantity ?? null,
 					lastSyncedAt: product.lastSyncedAt,
-					discountRate: product.discountRate != null ? new Prisma.Decimal(product.discountRate / 100) : null,
+					discountRate,
 					brand: product.brand ?? null,
 					franchise: product.franchise ?? null,
 					janCode: product.janCode ?? null,
@@ -609,10 +643,7 @@ export async function upsertProductsFromSync(
 					imageUrls: product.imageUrls,
 					category: product.category,
 					series: product.series,
-					originalPrice:
-						product.originalPrice === null || product.originalPrice === undefined
-							? null
-							: new Prisma.Decimal(product.originalPrice),
+					originalPrice,
 					costPrice,
 					...(existing?.priceManualOverride ? {} : { markupOverride, sellingPrice }),
 					listingDate: product.listingDate ?? existing?.listingDate ?? now,
@@ -620,7 +651,7 @@ export async function upsertProductsFromSync(
 					inStock,
 					stockQuantity: product.stockQuantity ?? null,
 					lastSyncedAt: product.lastSyncedAt,
-					discountRate: product.discountRate != null ? new Prisma.Decimal(product.discountRate / 100) : null,
+					discountRate,
 					brand: product.brand ?? null,
 					franchise: product.franchise ?? null,
 					janCode: product.janCode ?? null,
@@ -816,20 +847,6 @@ export async function createOrderFromCart({
 	paymentMethod?: "bank_transfer" | "stripe";
 	paymentStatus?: "pending" | "paid";
 }) {
-	const tierSettings = await getTierSettingsValues();
-
-	const userRecord = await db.user.findUnique({
-		where: { id: userId },
-		select: { anismileTier: true },
-	});
-	const tierDiscountRate = new Prisma.Decimal(
-		userRecord?.anismileTier === "VIP"
-			? tierSettings.vipDiscount
-			: userRecord?.anismileTier === "WHOLESALE"
-				? tierSettings.wholesaleDiscount
-				: 0,
-	);
-
 	return await db.$transaction(async (tx) => {
 		const cartItems = await tx.anismileCartItem.findMany({
 			where: {
@@ -869,7 +886,7 @@ export async function createOrderFromCart({
 						quantity: item.quantity,
 						unitPrice: item.product.sellingPrice,
 						costPrice: item.product.costPrice,
-						tierDiscountRate,
+						tierDiscountRate: null,
 					})),
 				},
 			},
@@ -1405,72 +1422,90 @@ export async function searchAnismileProducts({
 	today.setHours(0, 0, 0, 0);
 	const urgentEnd = new Date(today);
 	urgentEnd.setDate(urgentEnd.getDate() + 7);
-	const showUnavailable = filters?.showUnavailable ?? false;
-	const onlyInStock = !showUnavailable || filters?.inStock === true;
+	const includeUnavailableMatches = filters?.showUnavailable === true;
+	const onlyInStock = filters?.inStock === true;
 
-	const andConditions: Prisma.AnismileProductWhereInput[] = [];
-	if (!showUnavailable) {
-		andConditions.push({ OR: [{ orderDeadline: null }, { orderDeadline: { gte: today } }] });
+	function buildSearchWhere({ showUnavailable }: { showUnavailable: boolean }): Prisma.AnismileProductWhereInput {
+		const andConditions: Prisma.AnismileProductWhereInput[] = [];
+		if (!showUnavailable) {
+			andConditions.push({ OR: [{ orderDeadline: null }, { orderDeadline: { gte: today } }] });
+		}
+		if (filters?.urgentDeadline) {
+			andConditions.push({ orderDeadline: { gte: today, lte: urgentEnd } });
+		}
+		andConditions.push(
+			isJanCode
+				? { janCode: { contains: normalizedQuery, mode: "insensitive" as const } }
+				: {
+						OR: [
+							{ titleOriginal: { contains: normalizedQuery, mode: "insensitive" as const } },
+							{ titleTranslated: { contains: normalizedQuery, mode: "insensitive" as const } },
+							{ descriptionTranslated: { contains: normalizedQuery, mode: "insensitive" as const } },
+							{ series: { contains: normalizedQuery, mode: "insensitive" as const } },
+							{ franchise: { contains: normalizedQuery, mode: "insensitive" as const } },
+							{ brand: { contains: normalizedQuery, mode: "insensitive" as const } },
+						],
+					},
+		);
+
+		return {
+			inStock: onlyInStock ? true : undefined,
+			...(filters?.category ? { category: filters.category } : {}),
+			...(filters?.franchise ? { franchise: filters.franchise } : {}),
+			...(filters?.brand ? { brand: filters.brand } : {}),
+			AND: andConditions,
+		};
 	}
-	if (filters?.urgentDeadline) {
-		andConditions.push({ orderDeadline: { gte: today, lte: urgentEnd } });
+
+	async function runSearch(baseWhere: Prisma.AnismileProductWhereInput) {
+		const [items, total, catFacets, franchiseFacets, brandFacets] = await Promise.all([
+			db.anismileProduct.findMany({
+				where: baseWhere,
+				orderBy: resolveProductOrderBy(sort),
+				take: perPage,
+				skip: (page - 1) * perPage,
+			}),
+			db.anismileProduct.count({ where: baseWhere }),
+			db.anismileProduct.groupBy({
+				by: ["category"],
+				where: { ...baseWhere, category: { not: null } },
+				_count: { _all: true },
+			}),
+			db.anismileProduct.groupBy({
+				by: ["franchise"],
+				where: { ...baseWhere, franchise: { not: null } },
+				_count: { _all: true },
+			}),
+			db.anismileProduct.groupBy({
+				by: ["brand"],
+				where: { ...baseWhere, brand: { not: null } },
+				_count: { _all: true },
+			}),
+		]);
+
+		return {
+			items,
+			total,
+			facets: {
+				categories: catFacets.map((f) => ({ name: f.category as string, count: f._count._all })),
+				franchises: franchiseFacets.map((f) => ({ name: f.franchise as string, count: f._count._all })),
+				brands: brandFacets.map((f) => ({ name: f.brand as string, count: f._count._all })),
+			},
+		};
 	}
-	andConditions.push(
-		isJanCode
-			? { janCode: { contains: normalizedQuery, mode: "insensitive" as const } }
-			: {
-					OR: [
-						{ titleOriginal: { contains: normalizedQuery, mode: "insensitive" as const } },
-						{ titleTranslated: { contains: normalizedQuery, mode: "insensitive" as const } },
-						{ descriptionTranslated: { contains: normalizedQuery, mode: "insensitive" as const } },
-						{ series: { contains: normalizedQuery, mode: "insensitive" as const } },
-						{ franchise: { contains: normalizedQuery, mode: "insensitive" as const } },
-						{ brand: { contains: normalizedQuery, mode: "insensitive" as const } },
-					],
-				},
-	);
 
-	const baseWhere: Prisma.AnismileProductWhereInput = {
-		inStock: onlyInStock ? true : undefined,
-		...(filters?.category ? { category: filters.category } : {}),
-		...(filters?.franchise ? { franchise: filters.franchise } : {}),
-		...(filters?.brand ? { brand: filters.brand } : {}),
-		AND: andConditions,
-	};
+	const result = await runSearch(buildSearchWhere({ showUnavailable: includeUnavailableMatches }));
+	if (includeUnavailableMatches || result.total > 0) {
+		return {
+			...result,
+			usedUnavailableFallback: false,
+		};
+	}
 
-	const [items, total, catFacets, franchiseFacets, brandFacets] = await Promise.all([
-		db.anismileProduct.findMany({
-			where: baseWhere,
-			orderBy: resolveProductOrderBy(sort),
-			take: perPage,
-			skip: (page - 1) * perPage,
-		}),
-		db.anismileProduct.count({ where: baseWhere }),
-		db.anismileProduct.groupBy({
-			by: ["category"],
-			where: { ...baseWhere, category: { not: null } },
-			_count: { _all: true },
-		}),
-		db.anismileProduct.groupBy({
-			by: ["franchise"],
-			where: { ...baseWhere, franchise: { not: null } },
-			_count: { _all: true },
-		}),
-		db.anismileProduct.groupBy({
-			by: ["brand"],
-			where: { ...baseWhere, brand: { not: null } },
-			_count: { _all: true },
-		}),
-	]);
-
+	const fallbackResult = await runSearch(buildSearchWhere({ showUnavailable: true }));
 	return {
-		items,
-		total,
-		facets: {
-			categories: catFacets.map((f) => ({ name: f.category as string, count: f._count._all })),
-			franchises: franchiseFacets.map((f) => ({ name: f.franchise as string, count: f._count._all })),
-			brands: brandFacets.map((f) => ({ name: f.brand as string, count: f._count._all })),
-		},
+		...(fallbackResult.total > 0 ? fallbackResult : result),
+		usedUnavailableFallback: fallbackResult.total > 0,
 	};
 }
 
@@ -1650,13 +1685,17 @@ export async function updateProductFields(input: {
 	} else if (input.markupOverride !== undefined) {
 		const product = await db.anismileProduct.findUnique({
 			where: { id: input.id },
-			select: { costPrice: true },
+			select: { costPrice: true, originalPrice: true, sellingPrice: true },
 		});
 		if (!product) throw new Error("Product not found");
 		const costPrice = product.costPrice;
-		const markup = input.markupOverride !== null ? new Prisma.Decimal(input.markupOverride) : await getDefaultMarkup();
+		const originalPrice = product.originalPrice;
+		const backsolvePercent = input.markupOverride !== null ? new Prisma.Decimal(input.markupOverride) : await getDefaultBacksolvePercent();
 		updateData.markupOverride = input.markupOverride !== null ? new Prisma.Decimal(input.markupOverride) : null;
-		updateData.sellingPrice = calculateSellingPrice({ costPrice, markup });
+		updateData.sellingPrice =
+			originalPrice && originalPrice.gt(0)
+				? calculateBacksolveSellingPrice({ originalPrice, costPrice, backsolvePercent })
+				: product.sellingPrice;
 		updateData.priceManualOverride = false;
 	}
 

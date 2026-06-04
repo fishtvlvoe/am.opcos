@@ -12,6 +12,7 @@ type OrderRow = {
 	status: OrderStatus;
 	createdAt: Date | string;
 	totalAmount: number;
+	thumbnailUrl?: string;
 	items: Array<{ quantity: number; unitPrice: number; costPrice?: number }>;
 };
 
@@ -141,6 +142,7 @@ export function OrderTable({
 						<tr className="border-b border-stone-200 text-left text-stone-500">
 							<th className="px-2 py-2 font-medium">編號</th>
 							<th className="px-2 py-2 font-medium">客戶</th>
+							<th className="px-2 py-2 font-medium">商品圖</th>
 							<th className="px-2 py-2 font-medium">品項數</th>
 							<th className="px-2 py-2 font-medium">金額</th>
 							<th className="px-2 py-2 font-medium">利潤</th>
@@ -160,6 +162,18 @@ export function OrderTable({
 								<tr key={row.id} className="border-b border-stone-100">
 									<td className="px-2 py-2 font-mono text-xs">{row.id}</td>
 									<td className="px-2 py-2">{row.user.name}</td>
+									<td className="px-2 py-2">
+										{row.thumbnailUrl ? (
+											<img
+												src={row.thumbnailUrl}
+												alt=""
+												className="h-6 w-6 rounded border border-stone-200 object-cover"
+												loading="lazy"
+											/>
+										) : (
+											<div className="h-6 w-6 rounded border border-dashed border-stone-200 bg-stone-50" />
+										)}
+									</td>
 									<td className="px-2 py-2">{itemCount}</td>
 									<td className="px-2 py-2">¥ {Number(row.totalAmount).toFixed(2)}</td>
 									<td className="px-2 py-2 font-medium text-green-700">¥ {rowProfit.toFixed(2)}</td>

@@ -4,6 +4,9 @@ packages:
   - tooling/*
 strictPeerDependencies: false
 
+# ⚠️ Catalog SSOT：上游為 opcos.me/pnpm-workspace.yaml（母站 monorepo）。
+# 此 catalog 為從 opcos.me 同步的下游副本，請勿在此獨立改版本（會造成版本漂移）。
+# 同步時機：catalog 版本與 opcos.me 漂移時，從 opcos.me 重新同步（複製其 catalog 段），方向永遠 opcos.me → AM，不反向修改 opcos.me。
 catalog:
   "@ai-sdk/anthropic": ^3.0.75
   "@ai-sdk/openai": ^3.0.62

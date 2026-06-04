@@ -34,6 +34,7 @@ const sortOptions = [
 
 type SearchProduct = {
 	id: string;
+	supplierId?: string | null;
 	sourceUrl?: string | null;
 	titleTranslated?: string | null;
 	titleOriginal?: string | null;
@@ -43,12 +44,38 @@ type SearchProduct = {
 	janCode?: string | null;
 	brand?: string | null;
 	franchise?: string | null;
+	originalPrice?: number | null;
+	costPrice?: number | null;
 	sellingPrice?: number | null;
+	discountRate?: number | null;
+	saleStatus?: string | null;
+	boxSpec?: string | null;
 	listingDate?: Date | string | null;
 	orderDeadline?: Date | string | null;
 	releaseDate?: Date | string | null;
 	inStock?: boolean | null;
 };
+
+export type SearchPageSearchResult = {
+	items: SearchProduct[];
+	total: number;
+	facets: {
+		categories: Array<{ name: string; count: number }>;
+		franchises: Array<{ name: string; count: number }>;
+		brands: Array<{ name: string; count: number }>;
+	};
+	usedUnavailableFallback?: boolean;
+};
+
+export type SearchPageAllProductsResult = {
+	items: SearchProduct[];
+	total: number;
+	page: number;
+	pageSize: number;
+	totalPages: number;
+};
+
+export type SearchPageCategories = Array<{ name: string; count: number }>;
 
 function csvEscape(value: unknown) {
 	const text = value == null ? "" : String(value);
@@ -89,7 +116,15 @@ function downloadSearchCsv(products: SearchProduct[]) {
 	URL.revokeObjectURL(link.href);
 }
 
-export function SearchPage() {
+export function SearchPage({
+	initialSearchData,
+	initialAllProductsData,
+	initialCategories,
+}: {
+	initialSearchData?: SearchPageSearchResult;
+	initialAllProductsData?: SearchPageAllProductsResult;
+	initialCategories?: SearchPageCategories;
+}) {
 	const [q] = useQueryState("q", parseAsString.withDefault(""));
 	const [category, setCategory] = useQueryState("category", parseAsString.withDefault(""));
 	const [franchise, setFranchise] = useQueryState("franchise", parseAsString.withDefault(""));
@@ -162,19 +197,43 @@ export function SearchPage() {
 		...orpc.anismile.categories.queryOptions({ input: {} }),
 		enabled: isAllProductsMode,
 	});
+	const [visibleSearchData, setVisibleSearchData] = useState<SearchPageSearchResult | undefined>(initialSearchData);
+	const [visibleAllProductsData, setVisibleAllProductsData] = useState<SearchPageAllProductsResult | undefined>(initialAllProductsData);
+	const [visibleCategories, setVisibleCategories] = useState<SearchPageCategories | undefined>(initialCategories);
 
-	const facets = searchQuery.data?.facets;
+	useEffect(() => {
+		if (searchQuery.data) {
+			setVisibleSearchData(searchQuery.data);
+		}
+	}, [searchQuery.data]);
+
+	useEffect(() => {
+		if (allProductsQuery.data) {
+			setVisibleAllProductsData(allProductsQuery.data);
+		}
+	}, [allProductsQuery.data]);
+
+	useEffect(() => {
+		if (categoriesQuery.data) {
+			setVisibleCategories(categoriesQuery.data);
+		}
+	}, [categoriesQuery.data]);
+
+	const visibleSearchResult = searchQuery.data ?? visibleSearchData;
+	const visibleAllProductsResult = allProductsQuery.data ?? visibleAllProductsData;
+	const visibleCategoryFacets = categoriesQuery.data ?? visibleCategories;
+	const facets = visibleSearchResult?.facets;
 	const facetGroups = useMemo(() => {
 		const groups: Array<{ label: string; key: string; items: Array<{ name: string; count: number }> }> = [];
-		if (isAllProductsMode && categoriesQuery.data?.length) {
-			groups.push({ label: "分類", key: "category", items: categoriesQuery.data });
+		if (isAllProductsMode && visibleCategoryFacets?.length) {
+			groups.push({ label: "分類", key: "category", items: visibleCategoryFacets });
 			return groups;
 		}
 		if (facets?.categories?.length) groups.push({ label: "分類", key: "category", items: facets.categories });
 		if (facets?.franchises?.length) groups.push({ label: "作品系列", key: "franchise", items: facets.franchises });
 		if (facets?.brands?.length) groups.push({ label: "品牌", key: "brand", items: facets.brands });
 		return groups;
-	}, [categoriesQuery.data, facets, isAllProductsMode]);
+	}, [facets, isAllProductsMode, visibleCategoryFacets]);
 
 	const quickFilters: QuickFilter[] = [
 		{ key: "showUnavailable", label: "顯示不可購買商品", checked: pendingQuickFilters.showUnavailable },
@@ -196,8 +255,11 @@ export function SearchPage() {
 	};
 
 	const activeQuery = isAllProductsMode ? allProductsQuery : searchQuery;
-	const items = (activeQuery.data?.items ?? []) as SearchProduct[];
-	const total = activeQuery.data?.total ?? 0;
+	const activeResult = isAllProductsMode ? visibleAllProductsResult : visibleSearchResult;
+	const items = (activeResult?.items ?? []) as SearchProduct[];
+	const total = activeResult?.total ?? 0;
+	const isUpdatingResults = activeQuery.isFetching && !!activeResult;
+	const usedUnavailableFallback = !isAllProductsMode && visibleSearchResult?.usedUnavailableFallback === true;
 
 	const filterPanel = (
 		<div className="space-y-4">
@@ -238,7 +300,10 @@ export function SearchPage() {
 			<div className="flex items-end justify-between gap-3">
 				<div>
 					<h1 className="font-semibold text-2xl text-stone-950">搜尋結果</h1>
-					<p className="mt-1 text-sm text-muted-foreground">共 {total} 件</p>
+					<p className="mt-1 text-sm text-muted-foreground">
+						共 {total} 件
+						{isUpdatingResults ? <span className="ml-2 text-xs text-stone-500">更新中...</span> : null}
+					</p>
 				</div>
 				<div className="flex items-center gap-1 rounded-md border border-stone-200 bg-white p-1" aria-label="搜尋結果顯示方式">
 					<button
@@ -305,7 +370,13 @@ export function SearchPage() {
 						</button>
 					</div>
 
-					{activeQuery.isPending ? (
+					{usedUnavailableFallback ? (
+						<div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+							目前沒有可購買商品，已改為顯示已同步的不可購買商品。
+						</div>
+					) : null}
+
+					{activeQuery.isPending && !activeResult ? (
 						<div className="py-24 text-center text-sm text-muted-foreground">載入中...</div>
 					) : activeQuery.isError ? (
 						<div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-6 text-sm text-amber-900">
@@ -327,7 +398,9 @@ export function SearchPage() {
 											key={item.id}
 											id={item.id}
 											title={item.titleTranslated || item.titleOriginal || ""}
-											price={item.sellingPrice ?? null}
+											price={item.originalPrice ?? item.sellingPrice ?? null}
+											originalPrice={item.originalPrice ?? null}
+											sellingPrice={item.sellingPrice ?? null}
 											imageUrl={Array.isArray(item.imageUrls) ? String(item.imageUrls[0] ?? "") : ""}
 											orderDeadline={item.orderDeadline ?? null}
 											listingDate={item.listingDate ?? null}

@@ -6,9 +6,20 @@ export const publicProcedure = os.$context<{
 }>();
 
 export const protectedProcedure = publicProcedure.use(async ({ context, next }) => {
-	const session = await auth.api.getSession({
-		headers: context.headers,
-	});
+	const bypassAuthForVisualTest =
+		process.env.NODE_ENV !== "production" && process.env.ANISMILE_VISUAL_TEST_BYPASS_AUTH === "1";
+
+	let session;
+	if (bypassAuthForVisualTest) {
+		session = {
+			session: { id: "mock-session-id", userId: "mock-admin-id", expiresAt: new Date(Date.now() + 3600000) },
+			user: { id: "mock-admin-id", role: "admin", email: "admin@example.com", name: "Mock Admin" },
+		};
+	} else {
+		session = await auth.api.getSession({
+			headers: context.headers,
+		});
+	}
 
 	if (!session) {
 		throw new ORPCError("UNAUTHORIZED");

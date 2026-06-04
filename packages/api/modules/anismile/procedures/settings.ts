@@ -1,4 +1,4 @@
-import { db, getDefaultMarkup, setDefaultMarkup } from "@repo/database";
+import { db, getDefaultBacksolvePercent, setDefaultBacksolvePercent } from "@repo/database";
 import { z } from "zod";
 
 import { anismileAdminProcedure, anismileSuperAdminProcedure, publicProcedure } from "../../../orpc/procedures";
@@ -11,10 +11,10 @@ export const getDefaultMarkupSetting = publicProcedure
 		summary: "Get default markup",
 	})
 	.handler(async () => {
-		const markup = await getDefaultMarkup();
+		const backsolvePercent = await getDefaultBacksolvePercent();
 		return {
-			key: "default_markup",
-			value: markup,
+			key: "default_backsolve_percent",
+			value: Number(backsolvePercent),
 		};
 	});
 
@@ -27,17 +27,17 @@ export const patchDefaultMarkup = anismileSuperAdminProcedure
 	})
 	.input(
 		z.object({
-			markup: z.number().positive().max(10),
+			backsolvePercent: z.number().min(0).max(100),
 		}),
 	)
 	.handler(async ({ input }) => {
-		const result = await setDefaultMarkup({
-			markup: input.markup,
+		const result = await setDefaultBacksolvePercent({
+			backsolvePercent: input.backsolvePercent,
 		});
 
 		return {
-			key: "default_markup",
-			value: result.markup,
+			key: "default_backsolve_percent",
+			value: Number(result.backsolvePercent),
 		};
 	});
 

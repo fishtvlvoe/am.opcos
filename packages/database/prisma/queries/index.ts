@@ -3,5 +3,6 @@ export * from "./organizations";
 export * from "./purchases";
 export * from "./users";
 export * from "./licenses";
+export * from "./backsolve-pricing";
 
 export * from "./anismile";

@@ -1,10 +1,6 @@
 import { app } from "@repo/api";
 import { handle } from "hono/vercel";
 
-import { initAnismileCron } from "../cron";
-
-initAnismileCron();
-
 const handler = handle(app);
 
 export const GET = handler;

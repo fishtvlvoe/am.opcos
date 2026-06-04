@@ -12,7 +12,7 @@ export function AdminSettingsPage() {
 	const { user } = useSession();
 	const queryClient = useQueryClient();
 	const isSuperAdmin = user?.role === "super_admin";
-	const [markup, setMarkup] = useState("1.2");
+	const [backsolvePercent, setBacksolvePercent] = useState("0");
 
 	// 批發折扣率（% 輸入，如 3 → 存 0.03）
 	const [wholesaleDiscountPct, setWholesaleDiscountPct] = useState("3");
@@ -36,7 +36,7 @@ export function AdminSettingsPage() {
 
 	useEffect(() => {
 		if (defaultMarkupQuery.data?.value !== undefined) {
-			setMarkup(String(defaultMarkupQuery.data.value));
+			setBacksolvePercent(String(defaultMarkupQuery.data.value));
 		}
 	}, [defaultMarkupQuery.data?.value]);
 
@@ -61,7 +61,7 @@ export function AdminSettingsPage() {
 	const markupMutation = useMutation(
 		orpc.anismile.settings.patchDefaultMarkup.mutationOptions({
 			onSuccess: () => {
-				toastSuccess("預設利潤率已更新");
+				toastSuccess("預設回推百分比已更新");
 				void queryClient.invalidateQueries({ queryKey: orpc.anismile.settings.getDefaultMarkup.key() });
 			},
 			onError: (error) => toastError(error.message || "更新失敗"),
@@ -132,18 +132,21 @@ export function AdminSettingsPage() {
 			{isSuperAdmin ? (
 				<Card>
 					<CardHeader>
-						<CardTitle>預設利潤率</CardTitle>
+						<CardTitle>預設回推百分比</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-3">
 						<p className="text-sm text-muted-foreground">
 							目前值：{defaultMarkupQuery.data?.value?.toString() ?? "載入中..."}
 						</p>
+						<p className="text-xs text-stone-500">
+							輸入 10 代表來源 8 折變客戶 9 折；輸入 5 代表來源 8 折變客戶 8.5 折。
+						</p>
 						<div className="flex gap-2">
-							<Input value={markup} onChange={(event) => setMarkup(event.target.value)} placeholder="例如 1.2" />
+							<Input value={backsolvePercent} onChange={(event) => setBacksolvePercent(event.target.value)} placeholder="例如 10" />
 							<Button
 								onClick={() =>
 									markupMutation.mutate({
-										markup: Number.parseFloat(markup),
+										backsolvePercent: Number.parseFloat(backsolvePercent),
 									})
 								}
 								disabled={markupMutation.isPending}
@@ -174,6 +177,7 @@ export function AdminSettingsPage() {
 								placeholder="例如 3"
 							/>
 							<p className="text-xs text-stone-400">輸入 3 代表 3% 折扣（帳單金額 × 0.97）</p>
+							<p className="text-xs text-stone-400">目前不影響商品單價，保留給未來整單優惠使用。</p>
 						</div>
 						<div className="space-y-1">
 							<label className="text-sm font-medium text-stone-700">VIP 折扣率 %</label>
@@ -187,6 +191,7 @@ export function AdminSettingsPage() {
 								placeholder="例如 5"
 							/>
 							<p className="text-xs text-stone-400">輸入 5 代表 5% 折扣（帳單金額 × 0.95）</p>
+							<p className="text-xs text-stone-400">目前不影響商品單價，保留給未來整單優惠使用。</p>
 						</div>
 						<div className="space-y-1">
 							<label className="text-sm font-medium text-stone-700">批發升級門檻（TWD）</label>

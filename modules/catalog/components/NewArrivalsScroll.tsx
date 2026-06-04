@@ -4,12 +4,14 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { DeadlineBadge } from "./DeadlineBadge";
+import { PriceDisplay } from "./PriceDisplay";
 
 type NewArrivalItem = {
 	id: string;
 	titleTranslated: string;
 	titleOriginal: string;
 	imageUrls: unknown;
+	originalPrice?: number | null;
 	sellingPrice: number | null;
 	orderDeadline: Date | string | null;
 };
@@ -37,9 +39,11 @@ export function NewArrivalsScroll({ items }: NewArrivalsScrollProps) {
 							<DeadlineBadge orderDeadline={item.orderDeadline} />
 						</div>
 						<p className="mt-2 line-clamp-2 text-sm text-stone-800">{title}</p>
-						<p className="mt-1 font-semibold text-sm text-stone-900">
-							{item.sellingPrice === null ? "登入查看價格" : `¥ ${item.sellingPrice.toFixed(2)}`}
-						</p>
+						<PriceDisplay
+							className="mt-1"
+							originalPrice={item.originalPrice}
+							memberPrice={item.sellingPrice}
+						/>
 					</Link>
 				);
 			})}

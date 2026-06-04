@@ -26,7 +26,7 @@ export const listProductPool = protectedProcedure
 		z.object({
 			status: z.string().optional(),
 			search: z.string().optional(),
-			page: z.number().int().min(1).default(1),
+			page: z.coerce.number().int().min(1).default(1),
 		}),
 	)
 	.handler(async ({ input, context: { user } }) => {

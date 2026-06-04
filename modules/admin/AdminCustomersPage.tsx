@@ -9,8 +9,8 @@ import { useEffect, useState } from "react";
 const PAGE_SIZE = 20;
 
 const TIER_CONFIG = {
-	NORMAL: { label: "普通用戶", badgeClass: "bg-stone-100 text-stone-600" },
-	WHOLESALE: { label: "批發用戶", badgeClass: "bg-blue-50 text-blue-700" },
+	NORMAL: { label: "一般客戶", badgeClass: "bg-stone-100 text-stone-600" },
+	WHOLESALE: { label: "團購客戶", badgeClass: "bg-blue-50 text-blue-700" },
 	VIP: { label: "VIP 會員", badgeClass: "bg-amber-50 text-amber-700" },
 } as const;
 

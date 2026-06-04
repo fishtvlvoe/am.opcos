@@ -6,13 +6,13 @@ import { CrownIcon, StarIcon, UserIcon } from "lucide-react";
 
 const TIER_CONFIG = {
 	NORMAL: {
-		label: "普通用戶",
+		label: "一般客戶",
 		icon: UserIcon,
 		color: "text-stone-500",
 		bg: "bg-stone-100",
 	},
 	WHOLESALE: {
-		label: "批發用戶",
+		label: "團購客戶",
 		icon: StarIcon,
 		color: "text-blue-600",
 		bg: "bg-blue-50",
@@ -46,16 +46,16 @@ export function MemberTierPage() {
 	const settings = settingsQuery.data;
 
 	const tierTable = [
-		{ tier: "普通用戶", threshold: "—", discount: "定價" },
+		{ tier: "一般客戶", threshold: "—", discount: "統一會員價" },
 		{
-			tier: "批發用戶",
+			tier: "團購客戶",
 			threshold: settings ? `¥${settings.wholesaleThreshold.toLocaleString()} / 月` : "—",
-			discount: settings ? `${Math.round(settings.wholesaleDiscount * 100)}% 折扣` : "—",
+			discount: settings ? `未來整單優惠 ${Math.round(settings.wholesaleDiscount * 100)}%` : "—",
 		},
 		{
 			tier: "VIP 會員",
 			threshold: settings ? `¥${settings.vipThreshold.toLocaleString()} / 月` : "—",
-			discount: settings ? `${Math.round(settings.vipDiscount * 100)}% 折扣` : "—",
+			discount: settings ? `未來整單優惠 ${Math.round(settings.vipDiscount * 100)}%` : "—",
 		},
 	];
 
@@ -71,7 +71,7 @@ export function MemberTierPage() {
 	const monthlyOrderAmount = data?.monthlyOrderAmount ?? 0;
 	const nextTierThreshold = data?.nextTierThreshold ?? null;
 	const discountRate = data?.discount ?? 0;
-	const discountLabel = discountRate > 0 ? `享 ${Math.round(discountRate * 100)}% 折扣優惠` : "一般定價";
+	const discountLabel = discountRate > 0 ? `保留 ${Math.round(discountRate * 100)}% 整單優惠方案` : "統一會員價";
 
 	return (
 		<div className="container max-w-2xl py-10">
@@ -113,7 +113,7 @@ export function MemberTierPage() {
 						<tr className="border-b bg-muted/40">
 							<th className="px-4 py-3 text-left font-medium">等級</th>
 							<th className="px-4 py-3 text-left font-medium">月訂貨門檻</th>
-							<th className="px-4 py-3 text-left font-medium">折扣</th>
+							<th className="px-4 py-3 text-left font-medium">方案說明</th>
 						</tr>
 					</thead>
 					<tbody>

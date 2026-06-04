@@ -1,10 +1,21 @@
+import { auth } from "@repo/auth";
 import { db } from "@repo/database";
 import { z } from "zod";
+import { toTraditionalChinese } from "../lib/opencc";
 
 import { publicProcedure } from "../../../orpc/procedures";
 
 const ANISMILE_ORIGIN = "https://www.anismile.jp";
 const PLACEHOLDER_IMAGE_MARKER = "length_shadow_white";
+
+async function canSeePricing(headers: Headers) {
+	const session = await auth.api.getSession({ headers });
+	return !!session;
+}
+
+function publicPrice<T extends number>(value: T, visible: boolean): T | null {
+	return visible ? value : null;
+}
 
 type SourceSeriesItem = {
 	id: number | string;
@@ -63,9 +74,66 @@ function isPlaceholderImageUrl(url: string | null | undefined) {
 	return !url || url.includes(PLACEHOLDER_IMAGE_MARKER);
 }
 
+function getSeriesRoot(seriesName: string) {
+	return seriesName.split("・")[0] ?? seriesName;
+}
+
+function matchesSeriesName(sourceSeriesName: string, productSeriesName: string | null) {
+	if (!sourceSeriesName || !productSeriesName) return false;
+	if (
+		productSeriesName === sourceSeriesName ||
+		productSeriesName.startsWith(sourceSeriesName) ||
+		sourceSeriesName.startsWith(productSeriesName)
+	) {
+		return true;
+	}
+	// Cross-batch fallback: same series root (e.g. "DEATH NOTE・ステラノーツ・6月28日截单" vs "DEATH NOTE・KADOKAWAより・1月6日截单")
+	const sourceRoot = getSeriesRoot(sourceSeriesName);
+	const productRoot = getSeriesRoot(productSeriesName);
+	return sourceRoot === productRoot && sourceRoot.length >= 2;
+}
+
+async function getSyncedSeriesFallbackImageMap(seriesNames: string[]) {
+	const uniqueSeriesNames = Array.from(new Set(seriesNames.map((name) => name.trim()).filter(Boolean)));
+	if (uniqueSeriesNames.length === 0) {
+		return new Map<string, string>();
+	}
+
+	const seriesRoots = uniqueSeriesNames.map((name) => getSeriesRoot(name));
+	const allTerms = Array.from(new Set([...uniqueSeriesNames, ...seriesRoots]));
+
+	const products = await db.anismileProduct.findMany({
+		where: {
+			OR: allTerms.map((term) => ({
+				series: { startsWith: term },
+			})),
+		},
+		select: {
+			series: true,
+			imageUrls: true,
+			listingDate: true,
+			createdAt: true,
+		},
+		orderBy: [{ listingDate: "desc" }, { createdAt: "desc" }],
+	});
+
+	const syncedSeriesFallbackImageMap = new Map<string, string>();
+	for (const seriesName of uniqueSeriesNames) {
+		for (const product of products) {
+			if (!matchesSeriesName(seriesName, product.series)) continue;
+			const usableImage = toImageUrlArray(product.imageUrls).find((url) => !isPlaceholderImageUrl(url));
+			if (!usableImage) continue;
+			syncedSeriesFallbackImageMap.set(seriesName, usableImage);
+			break;
+		}
+	}
+
+	return syncedSeriesFallbackImageMap;
+}
+
 async function getSourceSeriesImageMap() {
 	const responses = await Promise.all(
-		Array.from({ length: 30 }, async (_, dateIndex) => {
+		Array.from({ length: 7 }, async (_, dateIndex) => {
 			const url = new URL(`${ANISMILE_ORIGIN}/series_list/index`);
 			url.searchParams.set("lang", "en");
 			url.searchParams.set("dateIndex", String(dateIndex));
@@ -98,6 +166,101 @@ function getDisplayImageUrls(product: { imageUrls: unknown; series: string | nul
 	if (!isPlaceholderImageUrl(imageUrls[0])) return imageUrls;
 	const fallbackImage = getSeriesFallbackImage(product.series, seriesImageMap);
 	return fallbackImage ? [fallbackImage, ...imageUrls.filter((url) => !isPlaceholderImageUrl(url))] : imageUrls;
+}
+
+async function getSyncedSeriesListByDate({
+	targetDate,
+	limit,
+}: {
+	targetDate: string;
+	limit: number;
+}) {
+	const dayStart = new Date(`${targetDate}T00:00:00.000Z`);
+	const dayEnd = new Date(`${targetDate}T23:59:59.999Z`);
+	const products = await db.anismileProduct.findMany({
+		where: {
+			listingDate: {
+				gte: dayStart,
+				lte: dayEnd,
+			},
+			series: {
+				not: null,
+			},
+		},
+		select: {
+			id: true,
+			series: true,
+			imageUrls: true,
+			brand: true,
+			franchise: true,
+			createdAt: true,
+		},
+		orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+	});
+
+	const grouped = new Map<
+		string,
+		{
+			id: string;
+			name: string;
+			imageUrl: string;
+			productCount: number;
+			workTitle: string;
+			manufacturer: string;
+			latestAddTime: number | null;
+			latestCreatedAt: Date;
+		}
+	>();
+
+	for (const product of products) {
+		const seriesName = product.series?.trim();
+		if (!seriesName) continue;
+
+		const usableImage = toImageUrlArray(product.imageUrls).find((url) => !isPlaceholderImageUrl(url)) ?? "";
+		const existing = grouped.get(seriesName);
+		if (!existing) {
+			grouped.set(seriesName, {
+				id: product.id,
+				name: seriesName,
+				imageUrl: usableImage,
+				productCount: 1,
+				workTitle: product.franchise ?? "",
+				manufacturer: product.brand ?? "",
+				latestAddTime: Math.floor(product.createdAt.getTime() / 1000),
+				latestCreatedAt: product.createdAt,
+			});
+			continue;
+		}
+
+		existing.productCount += 1;
+		if (!existing.imageUrl && usableImage) {
+			existing.imageUrl = usableImage;
+		}
+		if (!existing.workTitle && product.franchise) {
+			existing.workTitle = product.franchise;
+		}
+		if (!existing.manufacturer && product.brand) {
+			existing.manufacturer = product.brand;
+		}
+		if (product.createdAt > existing.latestCreatedAt) {
+			existing.latestCreatedAt = product.createdAt;
+			existing.latestAddTime = Math.floor(product.createdAt.getTime() / 1000);
+		}
+	}
+
+	const sorted = Array.from(grouped.values())
+		.sort((a, b) => b.latestCreatedAt.getTime() - a.latestCreatedAt.getTime() || b.productCount - a.productCount)
+		.slice(0, limit);
+
+	const seriesWithoutImage = sorted.filter((item) => !item.imageUrl).map((item) => item.name);
+	const fallbackImageMap = await getSyncedSeriesFallbackImageMap(seriesWithoutImage);
+	for (const item of sorted) {
+		if (!item.imageUrl && fallbackImageMap.has(item.name)) {
+			item.imageUrl = fallbackImageMap.get(item.name) ?? "";
+		}
+	}
+
+	return sorted.map(({ latestCreatedAt: _latestCreatedAt, ...item }) => item);
 }
 
 // Banner 資料結構
@@ -175,25 +338,89 @@ export const getSeriesList = publicProcedure
 			url.searchParams.set("dateIndex", String(input.dateIndex));
 		}
 
-		const response = await fetch(url, { next: { revalidate: 300 } });
-		if (!response.ok) {
-			throw new Error(`Failed to fetch source series list: ${response.status}`);
+		let items: Array<{
+			id: string;
+			name: string;
+			imageUrl: string;
+			productCount: number;
+			workTitle: string;
+			manufacturer: string;
+			latestAddTime: number | null;
+		}> = [];
+		let availableDates: Array<{ date: string; display: string; count: number }> = [];
+		let targetDate: string | null = null;
+		let usedFallback = false;
+
+		try {
+			const response = await fetch(url, { next: { revalidate: 300 } });
+			if (!response.ok) {
+				throw new Error(`Failed to fetch source series list: ${response.status}`);
+			}
+			const payload = (await response.json()) as SourceSeriesResponse;
+			availableDates = payload.availableDates ?? [];
+			const requestedDate = input.dateIndex !== undefined ? availableDates[input.dateIndex]?.date ?? null : null;
+			targetDate = requestedDate ?? payload.targetDate ?? null;
+
+			const sourceItems = (payload.items ?? []).slice(0, input.limit);
+			const syncedSeriesFallbackImageMap = await getSyncedSeriesFallbackImageMap(sourceItems.map((item) => item.name));
+			items = sourceItems.map((item) => ({
+				id: String(item.id),
+				name: item.name,
+				imageUrl: normalizeSourceImageUrl(item.file?.url || item.file?.thumb) || syncedSeriesFallbackImageMap.get(item.name) || "",
+				productCount: item.product_count ?? 0,
+				workTitle: item.work_title || "",
+				manufacturer: item.manufacturer || "",
+				latestAddTime: item.latest_add_time ?? null,
+			}));
+		} catch (error) {
+			console.error("[getSeriesList] Fetch failed, falling back to local DB:", error);
+			usedFallback = true;
+
+			// Fallback: 取得近期的 Listing Dates 作為 availableDates
+			const sevenDaysAgo = new Date();
+			sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+			const groups = await db.anismileProduct.groupBy({
+				by: ["listingDate"],
+				where: {
+					listingDate: { gte: sevenDaysAgo },
+					inStock: true,
+				},
+				orderBy: {
+					listingDate: "desc",
+				},
+			});
+
+			const dates = groups
+				.map((g) => g.listingDate?.toISOString().split("T")[0])
+				.filter((d): d is string => !!d);
+
+			availableDates = dates.map((dateStr) => {
+				const [, month, day] = dateStr.split("-");
+				return {
+					date: dateStr,
+					display: `${parseInt(month ?? "0")}月${parseInt(day ?? "0")}日`,
+					count: 0,
+				};
+			});
+
+			const dateIndex = input.dateIndex ?? 0;
+			targetDate = availableDates[dateIndex]?.date ?? null;
+
+			if (targetDate) {
+				items = await getSyncedSeriesListByDate({
+					targetDate,
+					limit: input.limit,
+				});
+			} else {
+				items = [];
+			}
 		}
-		const payload = (await response.json()) as SourceSeriesResponse;
-		const items = (payload.items ?? []).slice(0, input.limit).map((item) => ({
-			id: String(item.id),
-			name: item.name,
-			imageUrl: normalizeSourceImageUrl(item.file?.url || item.file?.thumb),
-			productCount: item.product_count ?? 0,
-			workTitle: item.work_title || "",
-			manufacturer: item.manufacturer || "",
-			latestAddTime: item.latest_add_time ?? null,
-		}));
 
 		return {
 			items,
-			availableDates: payload.availableDates ?? [],
-			targetDate: payload.targetDate ?? null,
+			availableDates,
+			targetDate,
+			usedFallback,
 		};
 	});
 
@@ -242,7 +469,8 @@ export const getProductsByDate = publicProcedure
 			date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日期格式須為 YYYY-MM-DD"),
 		}),
 	)
-	.handler(async ({ input }) => {
+	.handler(async ({ input, context }) => {
+		const showPrices = await canSeePricing(context.headers);
 		const dayStart = new Date(`${input.date}T00:00:00.000Z`);
 		const dayEnd = new Date(`${input.date}T23:59:59.999Z`);
 
@@ -260,6 +488,8 @@ export const getProductsByDate = publicProcedure
 					listingDate: true,
 					orderDeadline: true,
 					category: true,
+					originalPrice: true,
+					sellingPrice: true,
 				},
 				orderBy: { createdAt: "desc" },
 				take: 20,
@@ -270,7 +500,8 @@ export const getProductsByDate = publicProcedure
 					id: p.id,
 					title: p.titleTranslated,
 					janCode: p.janCode,
-					sellingPrice: null,
+					originalPrice: p.originalPrice ? p.originalPrice.toNumber() : null,
+					sellingPrice: p.sellingPrice ? publicPrice(p.sellingPrice.toNumber(), showPrices) : null,
 					imageUrls: p.imageUrls,
 					listingDate: p.listingDate?.toISOString() ?? null,
 					orderDeadline: p.orderDeadline?.toISOString() ?? null,
@@ -291,7 +522,8 @@ export const getDeadlineProducts = publicProcedure
 		tags: ["Anismile"],
 		summary: "Get products with upcoming order deadlines",
 	})
-	.handler(async () => {
+	.handler(async ({ context }) => {
+		const showPrices = await canSeePricing(context.headers);
 		const now = new Date();
 		const sevenDaysLater = new Date();
 		sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
@@ -310,6 +542,8 @@ export const getDeadlineProducts = publicProcedure
 				series: true,
 				franchise: true,
 				brand: true,
+				originalPrice: true,
+				sellingPrice: true,
 			},
 			orderBy: { orderDeadline: "asc" },
 			take: 20,
@@ -320,7 +554,8 @@ export const getDeadlineProducts = publicProcedure
 			products: products.map((p) => ({
 				id: p.id,
 				title: p.titleTranslated,
-				sellingPrice: null,
+				originalPrice: p.originalPrice ? p.originalPrice.toNumber() : null,
+				sellingPrice: p.sellingPrice ? publicPrice(p.sellingPrice.toNumber(), showPrices) : null,
 				imageUrls: getDisplayImageUrls(p, seriesImageMap),
 				orderDeadline: p.orderDeadline?.toISOString() ?? null,
 				category: p.category,
@@ -328,4 +563,196 @@ export const getDeadlineProducts = publicProcedure
 				brand: p.brand,
 			})),
 		};
+	});
+
+type SourceDeadlineItem = {
+	id: number | string;
+	name: string;
+	file?: { url?: string; thumb?: string };
+	product_count?: number;
+	work_title?: string;
+	manufacturer?: string;
+	earliest_deadline?: number;
+	deadline_date?: string;
+};
+
+type SourceDeadlineResponse = {
+	code: number;
+	items?: SourceDeadlineItem[];
+};
+
+export const getDeadlineList = publicProcedure
+	.route({
+		method: "GET",
+		path: "/anismile/homepage/deadline-list",
+		tags: ["Anismile"],
+		summary: "Get upcoming deadlines as series cards",
+	})
+	.handler(async () => {
+		try {
+			const response = await fetch(`${ANISMILE_ORIGIN}/deadline_list/index`, {
+				method: "POST",
+				headers: { "content-type": "application/x-www-form-urlencoded" },
+				body: new URLSearchParams({ dayOffset: "0" }),
+				next: { revalidate: 300 },
+			});
+			if (!response.ok) {
+				throw new Error(`Failed to fetch source deadlines: ${response.status}`);
+			}
+			const payload = (await response.json()) as SourceDeadlineResponse;
+			const sourceItems = (payload.items ?? []).slice(0, 24);
+			const items = sourceItems.map((item) => ({
+				id: String(item.id),
+				name: item.name,
+				imageUrl: normalizeSourceImageUrl(item.file?.url || item.file?.thumb),
+				productCount: item.product_count ?? 0,
+				workTitle: item.work_title || "",
+				manufacturer: item.manufacturer || "",
+				earliestDeadline: item.earliest_deadline ?? null,
+				deadlineDate: item.deadline_date ? item.deadline_date.replace("年", "/").replace("月", "/").replace("日", "") : "",
+			}));
+
+			return {
+				items,
+				usedFallback: false,
+			};
+		} catch (error) {
+			console.error("[getDeadlineList] Fetch failed, falling back to local DB:", error);
+			try {
+				const now = new Date();
+				const sevenDaysLater = new Date();
+				sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+				const products = await db.anismileProduct.findMany({
+					where: {
+						orderDeadline: { gte: now, lte: sevenDaysLater },
+						inStock: true,
+						series: { not: null },
+					},
+					select: {
+						series: true,
+						imageUrls: true,
+						orderDeadline: true,
+						franchise: true,
+						brand: true,
+					},
+				});
+
+				const grouped = new Map<string, typeof products>();
+				for (const p of products) {
+					const seriesName = p.series!;
+					if (!grouped.has(seriesName)) grouped.set(seriesName, []);
+					grouped.get(seriesName)!.push(p);
+				}
+
+				const fallbackItems = Array.from(grouped.entries()).map(([seriesName, plist]) => {
+					const first = plist[0]!;
+					const urls = toImageUrlArray(first.imageUrls);
+					const minDeadline = plist.reduce((min, cur) => {
+						if (!min) return cur.orderDeadline;
+						if (!cur.orderDeadline) return min;
+						return cur.orderDeadline < min ? cur.orderDeadline : min;
+					}, plist[0]?.orderDeadline ?? null);
+
+					const formattedDate = minDeadline
+						? `${minDeadline.getMonth() + 1}/${minDeadline.getDate()}`
+						: "";
+
+					return {
+						id: `fallback-${seriesName}`,
+						name: seriesName,
+						imageUrl: urls[0] ?? "",
+						productCount: plist.length,
+						workTitle: first.franchise || "",
+						manufacturer: first.brand || "",
+						earliestDeadline: minDeadline ? Math.floor(minDeadline.getTime() / 1000) : null,
+						deadlineDate: formattedDate,
+					};
+				});
+
+				return {
+					items: fallbackItems,
+					usedFallback: true,
+				};
+			} catch (fallbackError) {
+				console.error("[getDeadlineList] Local DB fallback failed:", fallbackError);
+				return {
+					items: [],
+					usedFallback: true,
+				};
+			}
+		}
+	});
+
+type SourceInstockItem = {
+	id: number | string;
+	name: string;
+	price?: string;
+	file?: { url?: string; thumb?: string };
+	manufacturer?: { name?: string };
+	deadline_date?: string;
+};
+
+type SourceInstockResponse = {
+	code: number;
+	items?: SourceInstockItem[];
+};
+
+export const getInstockList = publicProcedure
+	.route({
+		method: "GET",
+		path: "/anismile/homepage/instock-list",
+		tags: ["Anismile"],
+		summary: "Get in-stock products",
+	})
+	.handler(async ({ context }) => {
+		const showPrices = await canSeePricing(context.headers);
+		try {
+			const response = await fetch(`${ANISMILE_ORIGIN}/instock/index`, {
+				method: "POST",
+				headers: { "content-type": "application/x-www-form-urlencoded" },
+				next: { revalidate: 300 },
+			});
+			if (!response.ok) {
+				throw new Error(`Failed to fetch source instock: ${response.status}`);
+			}
+			const payload = (await response.json()) as SourceInstockResponse;
+			const sourceItems = (payload.items ?? []).slice(0, 10);
+			const supplierIds = sourceItems.map((item) => String(item.id));
+
+			const products = await db.anismileProduct.findMany({
+				where: { supplierId: { in: supplierIds } },
+				select: { id: true, supplierId: true, sellingPrice: true },
+			});
+
+			const localProductMap = new Map<string, { id: string; price: number }>();
+			for (const p of products) {
+				if (p.sellingPrice) {
+					localProductMap.set(p.supplierId, {
+						id: p.id,
+						price: p.sellingPrice.toNumber(),
+					});
+				}
+			}
+
+			const items = sourceItems.map((item) => {
+				const local = localProductMap.get(String(item.id));
+				return {
+					id: local?.id ?? `unregistered-${item.id}`,
+					name: toTraditionalChinese(item.name),
+					imageUrl: normalizeSourceImageUrl(item.file?.url || item.file?.thumb),
+					price: showPrices && local ? local.price : null,
+					manufacturer: item.manufacturer?.name || "",
+				};
+			});
+
+			return {
+				items,
+			};
+		} catch (error) {
+			console.error("[getInstockList] error:", error);
+			// 失敗時返回空，前端不渲染
+			return {
+				items: [],
+			};
+		}
 	});

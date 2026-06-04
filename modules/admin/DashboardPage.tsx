@@ -19,6 +19,11 @@ function isOrderStatus(value: string): value is OrderStatus {
 function normalizeOrderStatus(value: string): OrderStatus {
 	return isOrderStatus(value) ? value : "pending";
 }
+function getFirstImageUrl(value: unknown): string | undefined {
+	if (!Array.isArray(value)) return undefined;
+	const first = value.find((item) => typeof item === "string" && item.length > 0);
+	return typeof first === "string" ? first : undefined;
+}
 
 function buildCsv(rows: Array<{ id: string; status: string; createdAt: Date | string; totalAmount: number; user: { name: string } }>) {
 	const header = "orderId,customer,status,totalAmount,createdAt";
@@ -112,6 +117,9 @@ export function DashboardPage() {
 					...row,
 					status: normalizeOrderStatus(row.status),
 					totalAmount: Number(row.totalAmount),
+					thumbnailUrl: row.items
+						.map((item) => getFirstImageUrl(item.product.imageUrls))
+						.find((url): url is string => typeof url === "string"),
 					items: row.items.map((item) => ({
 						quantity: item.quantity,
 						unitPrice: Number(item.unitPrice),

@@ -26,7 +26,7 @@ import { z } from "zod";
 const schema = z.object({
 	titleTranslated: z.string().min(1, "名稱不可空白").optional(),
 	sellingPrice: z.number().positive().optional(),
-	markupOverride: z.number().min(0.01).max(10).nullable().optional(),
+	markupOverride: z.number().min(0).max(100).nullable().optional(),
 	discountRate: z.number().min(0).max(1).nullable().optional(),
 	saleStatus: z.enum(["預售中", "有現貨"]).nullable().optional(),
 });
@@ -128,7 +128,7 @@ export function EditProductModal({ product, open, onOpenChange, onSuccess }: Edi
 							type="number"
 							step="0.01"
 							min="0.01"
-							placeholder="直接設定售價（覆寫加成率）"
+							placeholder="直接設定最終會員價（覆寫自動回推）"
 							{...register("sellingPrice", {
 								setValueAs: (v) => (v === "" || v == null || Number.isNaN(Number(v)) ? undefined : Number(v)),
 							})}
@@ -136,15 +136,16 @@ export function EditProductModal({ product, open, onOpenChange, onSuccess }: Edi
 						{errors.sellingPrice && (
 							<p className="text-xs text-destructive">{errors.sellingPrice.message}</p>
 						)}
+						<p className="text-xs text-stone-400">直接填寫最終會員價，儲存後會跳過自動回推計算。</p>
 					</div>
 
 					<div className="space-y-1">
-						<label className="text-sm font-medium">加成率</label>
+						<label className="text-sm font-medium">商品回推百分比</label>
 						<Input
 							type="number"
-							step="0.01"
-							min="0.01"
-							max="10"
+							step="0.1"
+							min="0"
+							max="100"
 							placeholder="留空使用預設"
 							{...register("markupOverride", {
 								setValueAs: (v) => (v === "" || v == null || Number.isNaN(Number(v)) ? null : Number(v)),
@@ -153,6 +154,7 @@ export function EditProductModal({ product, open, onOpenChange, onSuccess }: Edi
 						{errors.markupOverride && (
 							<p className="text-xs text-destructive">{errors.markupOverride.message}</p>
 						)}
+						<p className="text-xs text-stone-400">輸入 10 代表來源 8 折時，此商品改以 9 折賣給客戶。</p>
 					</div>
 
 					<div className="space-y-1">

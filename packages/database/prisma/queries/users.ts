@@ -84,7 +84,7 @@ export async function createUser({
 }: {
 	email: string;
 	name: string;
-	role: "admin" | "user";
+	role: "admin" | "customer";
 	emailVerified: boolean;
 	onboardingComplete: boolean;
 }) {
