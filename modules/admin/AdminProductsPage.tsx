@@ -4,6 +4,7 @@ import { Badge, Button, toastError, toastSuccess } from "@repo/ui";
 import { orpc } from "@shared/lib/orpc-query-utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, UploadIcon, XIcon } from "lucide-react";
+import Image from "next/image";
 import { useRef, useState } from "react";
 import { EditProductModal } from "./components/EditProductModal";
 
@@ -51,8 +52,8 @@ function BatchPriceModal({
 			}
 			onConfirm(num / 100);
 		} else {
-			if (Number.isNaN(num) || num < 0.01 || num > 10) {
-				toastError("請輸入 0.01-10 的加成率倍數（如 1.3 代表 1.3x）");
+			if (Number.isNaN(num) || num < 0 || num > 100) {
+				toastError("請輸入 0-100 的回推百分比（如 10 代表來源 8 折變客戶 9 折）");
 				return;
 			}
 			onConfirm(num);
@@ -65,7 +66,7 @@ function BatchPriceModal({
 			<div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
 				<div className="mb-4 flex items-center justify-between">
 					<h2 className="text-base font-semibold">
-						{mode === "discount" ? "批量設折扣率" : "批量設加成率"}
+						{mode === "discount" ? "批量設折扣率" : "批量設回推百分比"}
 					</h2>
 					<button type="button" onClick={onClose} className="text-stone-600 hover:text-stone-900">
 						<XIcon className="size-4" />
@@ -74,15 +75,15 @@ function BatchPriceModal({
 				<p className="mb-3 text-sm text-stone-500">已選 {count} 件商品</p>
 				<div className="mb-4 space-y-1">
 					<label className="text-sm font-medium text-stone-700">
-						{mode === "discount" ? "折扣率（%，如 85 代表 85折）" : "加成率倍數（如 1.3）"}
+						{mode === "discount" ? "折扣率（%，如 85 代表 85折）" : "回推百分比（如 10 代表來源 8 折變客戶 9 折）"}
 					</label>
 					<input
 						type="number"
 						className="w-full rounded-md border border-stone-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
 						value={value}
 						onChange={(e) => setValue(e.target.value)}
-						placeholder={mode === "discount" ? "例如 85" : "例如 1.3"}
-						step={mode === "discount" ? "0.1" : "0.01"}
+						placeholder={mode === "discount" ? "例如 85" : "例如 10"}
+						step="0.1"
 					/>
 				</div>
 				<div className="flex gap-2">
@@ -123,7 +124,7 @@ function CsvPreviewModal({
 							<tr className="border-b bg-stone-50">
 								<th className="px-3 py-2 text-left font-medium text-stone-600">商品 ID</th>
 								<th className="px-3 py-2 text-right font-medium text-stone-600">折扣率</th>
-								<th className="px-3 py-2 text-right font-medium text-stone-600">加成率</th>
+								<th className="px-3 py-2 text-right font-medium text-stone-600">回推百分比</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -134,7 +135,7 @@ function CsvPreviewModal({
 										{row.discountRate != null ? `${Math.round(row.discountRate * 100)}%` : "—"}
 									</td>
 									<td className="px-3 py-2 text-right">
-										{row.markupOverride != null ? `${row.markupOverride}x` : "—"}
+										{row.markupOverride != null ? `${row.markupOverride}%` : "—"}
 									</td>
 								</tr>
 							))}
@@ -242,7 +243,7 @@ export function AdminProductsPage() {
 				const markupOverride = moRaw ? Number.parseFloat(moRaw) : null;
 				if (
 					(discountRate !== null && (Number.isNaN(discountRate) || discountRate < 0 || discountRate > 1)) ||
-					(markupOverride !== null && (Number.isNaN(markupOverride) || markupOverride < 0.01 || markupOverride > 10))
+					(markupOverride !== null && (Number.isNaN(markupOverride) || markupOverride < 0 || markupOverride > 100))
 				) {
 					continue;
 				}
@@ -317,7 +318,7 @@ export function AdminProductsPage() {
 						設折扣率
 					</Button>
 					<Button size="sm" variant="outline" onClick={() => setBatchModal("markup")} disabled={batchMutation.isPending}>
-						設加成率
+						設回推百分比
 					</Button>
 					<button type="button" className="ml-auto text-sm text-stone-600 hover:text-stone-900" onClick={() => setSelectedIds([])}>
 						清除選擇
@@ -342,7 +343,7 @@ export function AdminProductsPage() {
 								<th className="px-4 py-3 text-right font-medium">原價</th>
 								<th className="px-4 py-3 text-right font-medium">成本價</th>
 								<th className="px-4 py-3 text-right font-medium">售價</th>
-								<th className="px-4 py-3 text-right font-medium">加成率</th>
+								<th className="px-4 py-3 text-right font-medium">回推百分比</th>
 								<th className="px-4 py-3 text-left font-medium">操作</th>
 							</tr>
 						</thead>
@@ -357,7 +358,7 @@ export function AdminProductsPage() {
 										</td>
 										<td className="px-4 py-3">
 											{imageUrl ? (
-												<img src={imageUrl} alt="" className="size-10 rounded object-cover" />
+												<Image width={40} height={40} src={imageUrl} alt="" className="rounded object-cover" />
 											) : (
 												<div className="flex size-10 items-center justify-center rounded bg-stone-100 text-xs text-stone-500">—</div>
 											)}
@@ -375,7 +376,7 @@ export function AdminProductsPage() {
 										<td className="px-4 py-3 text-right font-medium">¥{Number(p.sellingPrice).toFixed(2)}</td>
 										<td className="px-4 py-3 text-right">
 											<span className="text-stone-600">
-												{p.markupOverride != null ? `${Number(p.markupOverride).toFixed(2)}x` : "預設"}
+												{p.markupOverride != null ? `${Number(p.markupOverride).toFixed(1)}%` : "預設"}
 											</span>
 										</td>
 										<td className="px-4 py-3">
