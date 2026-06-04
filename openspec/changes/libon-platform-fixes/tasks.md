@@ -6,7 +6,7 @@
 
 ## 2. 圖片優化：ProductDetailPage 相關產品區塊
 
-- [ ] [P] 2.1 ProductDetailPage 相關產品圖片使用 Next.js Image（實現 "Product detail images use optimized loading" requirement）
+- [x] [P] 2.1 ProductDetailPage 相關產品圖片使用 Next.js Image（實現 "Product detail images use optimized loading" requirement）
   - **Behavior**: `modules/detail/ProductDetailPage.tsx` 中相關產品區塊的 `<img>` 改為 `<Image>`，指定適當的 `width`/`height` 或 `fill` + `sizes`。對應 design 決策「決策 1：使用 Next.js `<Image>` 而非原生 `<img>`」。
   - **Verification**: 手動檢查商品詳情頁底部相關產品，確認圖片經 Next.js 優化載入
 

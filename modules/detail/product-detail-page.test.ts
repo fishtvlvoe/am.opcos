@@ -26,4 +26,30 @@ describe("Product detail public flow", () => {
 		expect(quantitySource).toContain("min = 1");
 		expect(quantitySource).toContain("max = 99");
 	});
+
+	it("shows public original price and member price contract", () => {
+		const pageSource = read("modules/detail/ProductDetailPage.tsx");
+
+		expect(pageSource).toContain("原價");
+		expect(pageSource).toContain("會員價");
+		expect(pageSource).toContain("登入查看會員價");
+		expect(pageSource).toContain("目前未加成");
+		expect(pageSource).toContain("sm:grid-cols-2");
+	});
+
+	it("formats discount fold labels without trailing .0", () => {
+		const pageSource = read("modules/detail/ProductDetailPage.tsx");
+
+		expect(pageSource).toContain("function formatDiscountFoldLabel");
+		expect(pageSource).toContain("Number.isInteger(fold) ? String(fold) : fold.toFixed(1)");
+	});
+
+	it("uses next/image for related products", () => {
+		const pageSource = read("modules/detail/ProductDetailPage.tsx");
+
+		expect(pageSource).toContain('import Image from "next/image";');
+		expect(pageSource).toContain("<Image");
+		expect(pageSource).not.toContain("img src={String(rp.imageUrls[0])}");
+	});
 });
+
