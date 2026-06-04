@@ -37,12 +37,18 @@ describe("upsertProductsFromSync sync protection contract", () => {
 		expect(querySource).toContain("product.inStock ??");
 	});
 
-	it("keeps expired and unavailable products out of public storefront APIs", () => {
+	it("keeps expired and unavailable products out of listing APIs", () => {
+		// 商品列表 API 仍在資料庫層過濾過期/缺貨商品
 		expect(productProcedureSource).toContain("const onlyInStock = includeUnavailableMatches ? input.inStock === true : true;");
 		expect(productProcedureSource).toContain("showUnavailable: includeUnavailableMatches");
-		expect(productProcedureSource).toContain("isPubliclyOrderableProduct");
 		expect(querySource).toContain("inStock: true");
 		expect(querySource).toContain("orderDeadline: { gte: today }");
+	});
+
+	it("allows viewing expired products on detail page", () => {
+		// getById 移除了 isPubliclyOrderableProduct 過濾，讓已截止商品仍可瀏覽（加入購物車按鈕會被 UI 層禁用）
+		expect(productProcedureSource).toContain("getProductById");
+		expect(productProcedureSource).not.toContain('throw new ORPCError("NOT_FOUND", { message: "Product not found" });\n\t\tif (!isPubliclyOrderableProduct');
 	});
 
 	it("triggers background crawler when result.total < 5 without blocking", () => {

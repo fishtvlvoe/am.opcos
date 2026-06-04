@@ -125,6 +125,10 @@ export function ProductDetailPage({ id }: { id: string }) {
 		})}`;
 	}, [daysUntilDeadline, product]);
 
+	if (productQuery.isError) {
+		return <p className="text-sm text-stone-500">商品不存在或已下架</p>;
+	}
+
 	if (!product) {
 		return <p className="text-sm text-stone-500">載入中...</p>;
 	}

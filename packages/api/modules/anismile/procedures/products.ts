@@ -382,9 +382,6 @@ export const getProductById = publicProcedure
 		if (!product) {
 			throw new ORPCError("NOT_FOUND", { message: "Product not found" });
 		}
-		if (!isPubliclyOrderableProduct(product)) {
-			throw new ORPCError("NOT_FOUND", { message: "Product not found" });
-		}
 		const seriesImageMap = await getSeriesImageMapForProducts([product]);
 
 		return {
