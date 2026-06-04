@@ -21,12 +21,12 @@ function formatDeadlineLabel(dateStr: string, earliestDeadline: number | null) {
 }
 
 export function DeadlineSection({ initialData }: { initialData?: { items: any[] } }) {
-	const deadlineQuery = useQuery(
-		orpc.anismile.homepage.getDeadlineList.queryOptions(
-			{ input: {} },
-			{ initialData }
-		),
-	);
+	const deadlineQuery = useQuery({
+		...orpc.anismile.homepage.getDeadlineList.queryOptions({
+			input: {},
+		}),
+		initialData,
+	});
 	const items = deadlineQuery.data?.items ?? [];
 
 	if (deadlineQuery.isPending && !initialData) return null;
