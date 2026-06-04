@@ -1,12 +1,19 @@
 import { auth } from "@repo/auth";
 import { db } from "@repo/database";
+import {
+	normalizeSourceImageUrl,
+	toImageUrlArray,
+	isPlaceholderImageUrl,
+	getSeriesFallbackImage,
+	getDisplayImageUrls,
+	getSourceSeriesImageMap,
+} from "@repo/database";
 import { z } from "zod";
 import { toTraditionalChinese } from "../lib/opencc";
 
 import { publicProcedure } from "../../../orpc/procedures";
 
 const ANISMILE_ORIGIN = "https://www.anismile.jp";
-const PLACEHOLDER_IMAGE_MARKER = "length_shadow_white";
 
 async function canSeePricing(headers: Headers) {
 	const session = await auth.api.getSession({ headers });
@@ -45,13 +52,6 @@ type SourceBannerResponse = {
 	}>;
 };
 
-function normalizeSourceImageUrl(url: string | undefined) {
-	if (!url) return "";
-	if (url.startsWith("/files/")) return `https://img.anismile.jp${url}`;
-	if (url.startsWith(`${ANISMILE_ORIGIN}/files/`)) return url.replace(`${ANISMILE_ORIGIN}/files/`, "https://img.anismile.jp/files/");
-	return url;
-}
-
 function normalizeSourceLinkUrl(url: string | undefined) {
 	if (!url) return undefined;
 	if (!url.startsWith(ANISMILE_ORIGIN)) return url;
@@ -64,14 +64,6 @@ function normalizeSourceLinkUrl(url: string | undefined) {
 	}
 
 	return `${parsed.pathname}${parsed.search}`;
-}
-
-function toImageUrlArray(value: unknown): string[] {
-	return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : [];
-}
-
-function isPlaceholderImageUrl(url: string | null | undefined) {
-	return !url || url.includes(PLACEHOLDER_IMAGE_MARKER);
 }
 
 function getSeriesRoot(seriesName: string) {
@@ -129,43 +121,6 @@ async function getSyncedSeriesFallbackImageMap(seriesNames: string[]) {
 	}
 
 	return syncedSeriesFallbackImageMap;
-}
-
-async function getSourceSeriesImageMap() {
-	const responses = await Promise.all(
-		Array.from({ length: 7 }, async (_, dateIndex) => {
-			const url = new URL(`${ANISMILE_ORIGIN}/series_list/index`);
-			url.searchParams.set("lang", "en");
-			url.searchParams.set("dateIndex", String(dateIndex));
-			const response = await fetch(url, { next: { revalidate: 300 } });
-			if (!response.ok) return [] as Array<[string, string]>;
-			const payload = (await response.json()) as SourceSeriesResponse;
-			return (payload.items ?? [])
-				.map((item): [string, string] => [
-					item.name,
-					normalizeSourceImageUrl(item.file?.url || item.file?.thumb),
-				])
-				.filter(([name, imageUrl]) => Boolean(name && imageUrl));
-		}),
-	).catch(() => []);
-
-	return new Map(responses.flat());
-}
-
-function getSeriesFallbackImage(series: string | null, seriesImageMap: Map<string, string>) {
-	if (!series) return null;
-	return (
-		seriesImageMap.get(series) ??
-		[...seriesImageMap.entries()].find(([name]) => series.startsWith(name) || name.startsWith(series))?.[1] ??
-		null
-	);
-}
-
-function getDisplayImageUrls(product: { imageUrls: unknown; series: string | null }, seriesImageMap: Map<string, string>) {
-	const imageUrls = toImageUrlArray(product.imageUrls);
-	if (!isPlaceholderImageUrl(imageUrls[0])) return imageUrls;
-	const fallbackImage = getSeriesFallbackImage(product.series, seriesImageMap);
-	return fallbackImage ? [fallbackImage, ...imageUrls.filter((url) => !isPlaceholderImageUrl(url))] : imageUrls;
 }
 
 async function getSyncedSeriesListByDate({
@@ -611,6 +566,19 @@ export const getDeadlineList = publicProcedure
 				earliestDeadline: item.earliest_deadline ?? null,
 				deadlineDate: item.deadline_date ? item.deadline_date.replace("年", "/").replace("月", "/").replace("日", "") : "",
 			}));
+
+			// Fallback: fill missing images from our synced DB products
+			const emptyImageSeriesNames = items
+				.filter((item) => !item.imageUrl)
+				.map((item) => item.name);
+			if (emptyImageSeriesNames.length > 0) {
+				const fallbackImageMap = await getSyncedSeriesFallbackImageMap(emptyImageSeriesNames);
+				for (const item of items) {
+					if (!item.imageUrl && fallbackImageMap.has(item.name)) {
+						item.imageUrl = fallbackImageMap.get(item.name) ?? "";
+					}
+				}
+			}
 
 			return {
 				items,

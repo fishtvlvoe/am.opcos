@@ -3,7 +3,7 @@
 import { Button } from "@repo/ui";
 import { orpc } from "@shared/lib/orpc-query-utils";
 import { useQuery } from "@tanstack/react-query";
-import Image from "next/image";
+import { SafeImage } from "../../shared/components/SafeImage";
 import Link from "next/link";
 
 function formatDeadlineLabel(dateStr: string, earliestDeadline: number | null) {
@@ -49,7 +49,7 @@ export function DeadlineSection({ initialData }: { initialData?: { items: Array<
 						>
 							<div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-stone-100">
 								{series.imageUrl ? (
-									<Image
+									<SafeImage
 										src={series.imageUrl}
 										alt={series.name}
 										fill

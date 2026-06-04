@@ -344,6 +344,20 @@ export async function getAnismileProductById(id: string) {
 	});
 }
 
+export async function getAnismileSeriesImageMap(): Promise<Map<string, string>> {
+	const seriesList = await db.anismileSeries.findMany({
+		where: { imageUrl: { not: null } },
+		select: { name: true, imageUrl: true },
+	});
+	return new Map(seriesList.map((s) => [s.name, s.imageUrl!]));
+}
+
+export async function getAnismileSeriesByName(name: string) {
+	return await db.anismileSeries.findUnique({
+		where: { name },
+	});
+}
+
 export async function listAnismileCategories() {
 	const groups = await db.anismileProduct.groupBy({
 		by: ["category"],

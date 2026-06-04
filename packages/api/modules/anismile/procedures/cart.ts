@@ -17,8 +17,8 @@ import type { CrawledAnismileProduct } from "../lib/crawler";
 import { crawlAnismileProductBySupplierId } from "../lib/crawler";
 import { notifyAdminNewOrder } from "../lib/line-notify";
 import { toNumberRequired } from "../lib/serialize";
+import { toImageUrlArray, isPlaceholderImageUrl } from "@repo/database";
 
-const PLACEHOLDER_IMAGE_MARKER = "length_shadow_white";
 const SOURCE_PRODUCT_REFRESH_TTL_MS = 30 * 60 * 1000;
 
 function getCartProductUnavailableReason(product: {
@@ -32,10 +32,6 @@ function getCartProductUnavailableReason(product: {
 	return null;
 }
 
-function toImageUrlArray(value: unknown): string[] {
-	return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : [];
-}
-
 function shouldRefreshCartProduct(product: {
 	imageUrls: unknown;
 	listingDate: Date | null;
@@ -44,7 +40,7 @@ function shouldRefreshCartProduct(product: {
 }) {
 	if (Date.now() - product.lastSyncedAt.getTime() < SOURCE_PRODUCT_REFRESH_TTL_MS) return false;
 	const firstImage = toImageUrlArray(product.imageUrls)[0];
-	if (!firstImage || firstImage.includes(PLACEHOLDER_IMAGE_MARKER)) return true;
+	if (!firstImage || isPlaceholderImageUrl(firstImage)) return true;
 	if (product.listingDate && product.orderDeadline && product.listingDate.getTime() > product.orderDeadline.getTime()) {
 		return true;
 	}

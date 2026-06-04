@@ -47,8 +47,8 @@ describe("Product detail public flow", () => {
 	it("uses next/image for related products", () => {
 		const pageSource = read("modules/detail/ProductDetailPage.tsx");
 
-		expect(pageSource).toContain('import Image from "next/image";');
-		expect(pageSource).toContain("<Image");
+		expect(pageSource).toContain('import { SafeImage } from "../shared/components/SafeImage"');
+		expect(pageSource).toContain("<SafeImage");
 		expect(pageSource).not.toContain("img src={String(rp.imageUrls[0])}");
 	});
 });

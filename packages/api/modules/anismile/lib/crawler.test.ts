@@ -56,7 +56,7 @@ describe("parseProductApi — new field extraction", () => {
 			item: { ...BASE_ITEM, work_title: ["死亡遊戯で飯を食う。"] },
 		};
 		const result = parseProductApiForTest(res);
-		expect(result?.franchise).toBe("死亡遊戯で飯を食う。");
+		expect(result?.franchise).toBe("死亡遊戱で飯を食う。");
 	});
 
 	it("extracts janCode from jancode field", () => {

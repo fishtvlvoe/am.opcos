@@ -133,6 +133,19 @@ export async function runSync(): Promise<SyncResult> {
 			},
 		);
 
+		// Sync series list (non-blocking — failure should not fail the whole sync)
+		try {
+			const { syncAnismileSeriesList } = await import("@repo/api/modules/anismile/lib/series-sync");
+			const seriesSyncResult = await syncAnismileSeriesList();
+			if (seriesSyncResult.failed) {
+				logger.warn("[sync] series list sync failed:", seriesSyncResult.error);
+			} else {
+				logger.info(`[sync] series list synced: ${seriesSyncResult.synced} series`);
+			}
+		} catch (seriesError) {
+			logger.warn("[sync] series list sync error:", seriesError);
+		}
+
 		await finishSyncLog({
 			id: syncLog.id,
 			status: "completed",

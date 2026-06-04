@@ -16,6 +16,16 @@ import {
 } from "@repo/database";
 import { z } from "zod";
 
+import {
+	normalizeSourceImageUrl,
+	toImageUrlArray,
+	isPlaceholderImageUrl,
+	getSeriesFallbackImage,
+	getDisplayImageUrls,
+	getSourceSeriesImageMap,
+	getSeriesImageMapForProducts,
+} from "@repo/database";
+
 import { anismileAdminProcedure, protectedProcedure, publicProcedure } from "../../../orpc/procedures";
 import { crawlAnismileProductBySupplierId, crawlAnismileProductsBySeriesName } from "../lib/crawler";
 import { toNumber, toNumberRequired } from "../lib/serialize";
@@ -29,38 +39,7 @@ function publicPrice<T extends number>(value: T, visible: boolean): T | null {
 	return visible ? value : null;
 }
 
-const ANISMILE_ORIGIN = "https://www.anismile.jp";
-const PLACEHOLDER_IMAGE_MARKER = "length_shadow_white";
-const SERIES_IMAGE_CACHE_TTL_MS = 5 * 60 * 1000;
 const SOURCE_PRODUCT_REFRESH_TTL_MS = 30 * 60 * 1000;
-
-let seriesImageCache: { expiresAt: number; map: Map<string, string> } | null = null;
-let seriesImageCachePromise: Promise<Map<string, string>> | null = null;
-
-type SeriesImageResponse = {
-	code: number;
-	items?: Array<{
-		name?: string;
-		file?: { url?: string; thumb?: string };
-	}>;
-};
-
-function normalizeSourceImageUrl(url: string | undefined) {
-	if (!url) return "";
-	if (url.startsWith("/files/")) return `https://img.anismile.jp${url}`;
-	if (url.startsWith(`${ANISMILE_ORIGIN}/files/`)) {
-		return url.replace(`${ANISMILE_ORIGIN}/files/`, "https://img.anismile.jp/files/");
-	}
-	return url;
-}
-
-function toImageUrlArray(value: unknown): string[] {
-	return Array.isArray(value) ? value.map((item) => String(item)).filter(Boolean) : [];
-}
-
-function isPlaceholderImageUrl(url: string | null | undefined) {
-	return !url || url.includes(PLACEHOLDER_IMAGE_MARKER);
-}
 
 function shouldRefreshSourceProduct(product: {
 	imageUrls: unknown;
@@ -75,14 +54,6 @@ function shouldRefreshSourceProduct(product: {
 		return true;
 	}
 	return false;
-}
-
-function isPubliclyOrderableProduct(product: {
-	inStock: boolean;
-	orderDeadline: Date | null;
-}) {
-	if (product.inStock) return true;
-	return !product.orderDeadline || product.orderDeadline.getTime() >= Date.now();
 }
 
 async function refreshSourceProductIfNeeded(product: {
@@ -124,72 +95,6 @@ async function refreshSourceProductIfNeeded(product: {
 		}],
 		{ markMissingOutOfStock: false },
 	);
-}
-
-async function fetchSourceSeriesImageMap(): Promise<Map<string, string>> {
-	const responses = await Promise.all(
-		Array.from({ length: 7 }, async (_, dateIndex) => {
-			const url = new URL(`${ANISMILE_ORIGIN}/series_list/index`);
-			url.searchParams.set("lang", "en");
-			url.searchParams.set("dateIndex", String(dateIndex));
-			const response = await fetch(url, { next: { revalidate: 300 } });
-			if (!response.ok) return [] as Array<[string, string]>;
-			const payload = (await response.json()) as SeriesImageResponse;
-			return (payload.items ?? [])
-				.map((item): [string, string] => [
-					item.name ?? "",
-					normalizeSourceImageUrl(item.file?.url || item.file?.thumb),
-				])
-				.filter(([name, imageUrl]) => Boolean(name && imageUrl));
-		}),
-	).catch(() => []);
-
-	const map = new Map(responses.flat());
-	seriesImageCache = {
-		expiresAt: Date.now() + SERIES_IMAGE_CACHE_TTL_MS,
-		map,
-	};
-	return map;
-}
-
-async function getSourceSeriesImageMap() {
-	if (seriesImageCache && seriesImageCache.expiresAt > Date.now()) {
-		return seriesImageCache.map;
-	}
-	if (!seriesImageCachePromise) {
-		seriesImageCachePromise = fetchSourceSeriesImageMap().finally(() => {
-			seriesImageCachePromise = null;
-		});
-	}
-	return seriesImageCachePromise;
-}
-
-function getSeriesFallbackImage(series: string | null, seriesImageMap: Map<string, string>) {
-	if (!series) return null;
-	return (
-		seriesImageMap.get(series) ??
-		[...seriesImageMap.entries()].find(([name]) => series.startsWith(name) || name.startsWith(series))?.[1] ??
-		null
-	);
-}
-
-function getDisplayImageUrls(product: { imageUrls: unknown; series: string | null }, seriesImageMap: Map<string, string>) {
-	const imageUrls = toImageUrlArray(product.imageUrls);
-	if (!isPlaceholderImageUrl(imageUrls[0])) return imageUrls;
-	const fallbackImage = getSeriesFallbackImage(product.series, seriesImageMap);
-	return fallbackImage ? [fallbackImage, ...imageUrls.filter((url) => !isPlaceholderImageUrl(url))] : imageUrls;
-}
-
-async function getSeriesImageMapForProducts(products: Array<{ imageUrls: unknown; lastSyncedAt?: Date | null }>) {
-	const needsFallback = products.some((product) => {
-		if (!isPlaceholderImageUrl(toImageUrlArray(product.imageUrls)[0])) return false;
-		if (product.lastSyncedAt && Date.now() - product.lastSyncedAt.getTime() < SOURCE_PRODUCT_REFRESH_TTL_MS) return false;
-		return true;
-	});
-	if (!needsFallback) {
-		return new Map<string, string>();
-	}
-	return await getSourceSeriesImageMap();
 }
 
 const listProductsInput = z.object({
@@ -265,8 +170,8 @@ export const listProducts = publicProcedure
 							})),
 						);
 					}
-				} catch (err) {
-					console.error(`Background crawler failed for series ${seriesName}:`, err);
+				} catch {
+					// Background crawler errors are intentionally silent
 				}
 			})();
 		}

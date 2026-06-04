@@ -7,11 +7,11 @@ const rootFile = (path: string) => resolve(workspaceRoot, path);
 
 describe("homepage getSourceSeriesImageMap contract", () => {
 	it("uses concurrency length of 7 for getSourceSeriesImageMap", () => {
-		const homepageSource = readFileSync(
-			rootFile("packages/api/modules/anismile/procedures/homepage.ts"),
+		const imageUtilsSource = readFileSync(
+			rootFile("packages/database/image-utils.ts"),
 			"utf8",
 		);
-		expect(homepageSource).toContain("Array.from({ length: 7 }");
+		expect(imageUtilsSource).toContain("Array.from({ length: 7 }");
 	});
 });
 

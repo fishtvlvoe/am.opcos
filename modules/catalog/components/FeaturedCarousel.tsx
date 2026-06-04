@@ -2,10 +2,10 @@
 
 import { cn } from "@repo/ui";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
+import { SafeImage } from "../../shared/components/SafeImage";
 import { PriceDisplay } from "./PriceDisplay";
 
 type FeaturedProduct = {
@@ -54,7 +54,7 @@ export function FeaturedCarousel({ products }: FeaturedCarouselProps) {
 						)}
 					>
 						{p.imageUrl ? (
-							<Image src={p.imageUrl} alt={p.title} width={80} height={80} className="size-full object-cover" />
+							<SafeImage src={p.imageUrl} alt={p.title} width={80} height={80} className="size-full object-cover" />
 						) : (
 							<div className="flex size-full items-center justify-center text-xs text-stone-500">縮圖</div>
 						)}
@@ -70,7 +70,7 @@ export function FeaturedCarousel({ products }: FeaturedCarouselProps) {
 							<div className="overflow-hidden rounded-xl border border-stone-200 bg-white transition-shadow hover:shadow-md">
 								<div className="relative aspect-square bg-stone-100">
 									{p.imageUrl ? (
-										<Image src={p.imageUrl} alt={p.title} fill sizes="(max-width: 768px) 80vw, 360px" className="object-cover" />
+										<SafeImage src={p.imageUrl} alt={p.title} fill sizes="(max-width: 768px) 80vw, 360px" className="object-cover" />
 									) : (
 										<div className="flex size-full items-center justify-center text-xs text-stone-500">商品圖片</div>
 									)}

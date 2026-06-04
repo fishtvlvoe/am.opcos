@@ -10,6 +10,7 @@
 		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@aws-sdk/client-s3": "catalog:",
 		"@orpc/client": "catalog:",
 		"@orpc/json-schema": "catalog:",
 		"@orpc/openapi": "catalog:",
@@ -29,8 +30,8 @@
 		"hono": "catalog:",
 		"nanoid": "catalog:",
 		"openai": "catalog:",
-		"opencc-js": "^1.0.5",
 		"openapi-merge": "^1.3.3",
+		"opencc-js": "^1.0.5",
 		"use-intl": "catalog:",
 		"zod": "catalog:"
 	},

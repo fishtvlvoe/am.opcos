@@ -101,6 +101,12 @@ export const AnismileProductScalarFieldEnumSchema = z.enum(['id', 'supplierId', 
 
 export type AnismileProductScalarFieldEnum = z.infer<typeof AnismileProductScalarFieldEnumSchema>;
 
+// File: AnismileSeriesScalarFieldEnum.schema.ts
+
+export const AnismileSeriesScalarFieldEnumSchema = z.enum(['id', 'name', 'imageUrl', 'productCount', 'lastSyncedAt', 'createdAt', 'updatedAt'])
+
+export type AnismileSeriesScalarFieldEnum = z.infer<typeof AnismileSeriesScalarFieldEnumSchema>;
+
 // File: AnismileCartItemScalarFieldEnum.schema.ts
 
 export const AnismileCartItemScalarFieldEnumSchema = z.enum(['id', 'userId', 'productId', 'quantity', 'createdAt'])
@@ -480,6 +486,21 @@ export const AnismileProductSchema = z.object({
 });
 
 export type AnismileProductType = z.infer<typeof AnismileProductSchema>;
+
+
+// File: AnismileSeries.schema.ts
+
+export const AnismileSeriesSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  imageUrl: z.string().nullish(),
+  productCount: z.number().int().nullish(),
+  lastSyncedAt: z.date(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export type AnismileSeriesType = z.infer<typeof AnismileSeriesSchema>;
 
 
 // File: AnismileCartItem.schema.ts

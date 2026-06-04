@@ -4,7 +4,7 @@ import { Badge, Button, toastError, toastSuccess } from "@repo/ui";
 import { orpc } from "@shared/lib/orpc-query-utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeftIcon, ChevronRightIcon, DownloadIcon, UploadIcon, XIcon } from "lucide-react";
-import Image from "next/image";
+import { SafeImage } from "../shared/components/SafeImage";
 import { useRef, useState } from "react";
 import { EditProductModal } from "./components/EditProductModal";
 
@@ -358,7 +358,7 @@ export function AdminProductsPage() {
 										</td>
 										<td className="px-4 py-3">
 											{imageUrl ? (
-												<Image width={40} height={40} src={imageUrl} alt="" className="rounded object-cover" />
+												<SafeImage width={40} height={40} src={imageUrl} alt="" className="rounded object-cover" />
 											) : (
 												<div className="flex size-10 items-center justify-center rounded bg-stone-100 text-xs text-stone-500">—</div>
 											)}

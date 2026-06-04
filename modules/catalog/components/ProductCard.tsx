@@ -4,10 +4,10 @@ import { useSession } from "@auth/hooks/use-session";
 import { cn } from "@repo/ui";
 import { differenceInCalendarDays, format } from "date-fns";
 import { Heart, MinusIcon, PlusIcon, ShoppingCart } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { SafeImage } from "../../shared/components/SafeImage";
 import { StockBadge } from "../../shared/components/StockBadge";
 import { DeadlineBadge } from "./DeadlineBadge";
 import { PriceDisplay } from "./PriceDisplay";
@@ -83,7 +83,7 @@ export function ProductCard({
 			<Link href={`/products/${id}`} className="block">
 				<div className="relative aspect-[4/3] bg-stone-100">
 					{imageUrl ? (
-						<Image
+						<SafeImage
 							src={imageUrl}
 							alt={title}
 							fill
@@ -164,41 +164,41 @@ export function ProductCard({
 					</div>
 					<button
 						type="button"
-						onClick={() => {
-							setIsFavorited(!isFavorited);
-							onToggleWishlist?.();
-						}}
-						className={cn(
-							"flex h-8 w-8 items-center justify-center rounded border border-primary text-primary transition-colors hover:bg-primary/10",
-							isFavorited && "border-red-500 bg-red-50 text-red-500",
-						)}
-					>
-						<Heart className={cn("size-3.5", isFavorited && "fill-current")} />
-					</button>
-					<button
-						type="button"
-						disabled={addDisabled}
-						onClick={() => onAddToCart?.(quantity)}
-						className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
-					>
-						<ShoppingCart className="size-3.5" />
-					</button>
-					</div>
-				) : (
-					isOrderClosed ? (
-						<span className="block rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-center text-sm font-medium text-stone-500">
-							已截止
-						</span>
-					) : (
-						<Link
-							href="/login"
-							className="block rounded-md border border-stone-200 px-3 py-2 text-center text-sm font-medium text-stone-700 hover:bg-stone-50"
+							onClick={() => {
+								setIsFavorited(!isFavorited);
+								onToggleWishlist?.();
+							}}
+							className={cn(
+								"flex h-8 w-8 items-center justify-center rounded border border-primary text-primary transition-colors hover:bg-primary/10",
+								isFavorited && "border-red-500 bg-red-50 text-red-500",
+							)}
 						>
-							登入後下單
-						</Link>
-					)
-				)}
-			</div>
-		</div>
-	);
-}
+							<Heart className={cn("size-3.5", isFavorited && "fill-current")} />
+						</button>
+						<button
+							type="button"
+							disabled={addDisabled}
+							onClick={() => onAddToCart?.(quantity)}
+							className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+						>
+							<ShoppingCart className="size-3.5" />
+						</button>
+						</div>
+					) : (
+						isOrderClosed ? (
+							<span className="block rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-center text-sm font-medium text-stone-500">
+								已截止
+							</span>
+							) : (
+								<Link
+									href="/login"
+									className="block rounded-md border border-stone-200 px-3 py-2 text-center text-sm font-medium text-stone-700 hover:bg-stone-50"
+								>
+									登入後下單
+								</Link>
+							)
+						)}
+					</div>
+				</div>
+			);
+			}

@@ -1,8 +1,9 @@
 "use client";
 
 import { cn } from "@repo/ui";
-import Image from "next/image";
 import { useMemo, useState } from "react";
+
+import { SafeImage } from "../../shared/components/SafeImage";
 
 type ImageGalleryProps = {
 	images: string[];
@@ -18,7 +19,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
 	return (
 		<div className="space-y-3">
 			<div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-stone-200 bg-stone-100">
-				{active ? <Image src={active} alt={title} fill priority sizes="(max-width: 1024px) 100vw, 55vw" className="object-cover" /> : null}
+				{active ? <SafeImage src={active} alt={title} fill priority sizes="(max-width: 1024px) 100vw, 55vw" className="object-cover" /> : null}
 			</div>
 
 			{normalized.length > 1 ? (
@@ -33,7 +34,7 @@ export function ImageGallery({ images, title }: ImageGalleryProps) {
 								index === activeIndex && "ring-2 ring-stone-900",
 							)}
 						>
-							<Image src={src} alt={`${title}-${index + 1}`} fill sizes="64px" className="object-cover" />
+							<SafeImage src={src} alt={`${title}-${index + 1}`} fill sizes="64px" className="object-cover" />
 						</button>
 					))}
 				</div>

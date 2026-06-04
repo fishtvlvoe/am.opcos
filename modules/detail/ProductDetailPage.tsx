@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { differenceInCalendarDays, format, formatDistanceToNowStrict } from "date-fns";
 import { zhTW } from "date-fns/locale";
 import { AlertTriangleIcon, Heart, ShoppingCart } from "lucide-react";
-import Image from "next/image";
+import { SafeImage } from "../shared/components/SafeImage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -22,17 +22,45 @@ function formatDiscountFoldLabel(memberDiscountPercent: number | null) {
 	return Number.isInteger(fold) ? String(fold) : fold.toFixed(1);
 }
 
-export function ProductDetailPage({ id }: { id: string }) {
+interface InitialProductData {
+	id: string;
+	supplierId: string;
+	sourceUrl: string | null;
+	titleOriginal: string;
+	titleTranslated: string;
+	descriptionTranslated: string | null;
+	imageUrls: string[];
+	category: string | null;
+	series: string | null;
+	janCode: string | null;
+	brand: string | null;
+	franchise: string | null;
+	boxSpec: string | null;
+	originalPrice: number | null;
+	costPrice: number | null;
+	discountRate: number | null;
+	saleStatus: string | null;
+	sellingPrice: number | null;
+	listingDate: Date | null;
+	orderDeadline: Date | null;
+	releaseDate: Date | null;
+	inStock: boolean;
+	stockQuantity: number | null;
+	lastSyncedAt: Date;
+}
+
+export function ProductDetailPage({ id, initialProductData }: { id: string; initialProductData: InitialProductData }) {
 	const router = useRouter();
 	const { user } = useSession();
 	const [quantity, setQuantity] = useState(1);
 	const canSeePricing = !!user;
 
-	const productQuery = useQuery(
-		orpc.anismile.products.getById.queryOptions({
+	const productQuery = useQuery({
+		...orpc.anismile.products.getById.queryOptions({
 			input: { id },
 		}),
-	);
+		initialData: initialProductData,
+	});
 
 	const addCartMutation = useMutation(
 		orpc.anismile.cart.add.mutationOptions({
@@ -125,11 +153,10 @@ export function ProductDetailPage({ id }: { id: string }) {
 		})}`;
 	}, [daysUntilDeadline, product]);
 
-	if (productQuery.isError) {
-		return <p className="text-sm text-stone-500">商品不存在或已下架</p>;
-	}
-
 	if (!product) {
+		if (productQuery.isError) {
+			return <p className="text-sm text-stone-500">商品不存在或已下架</p>;
+		}
 		return <p className="text-sm text-stone-500">載入中...</p>;
 	}
 
@@ -346,7 +373,7 @@ export function ProductDetailPage({ id }: { id: string }) {
 						</button>
 						<button
 							type="button"
-							disabled={addCartMutation.isPending || isExpired}
+							disabled={addCartMutation.isPending || isExpired || !product.inStock}
 							onClick={() => {
 								if (!user) {
 									const opcosUrl = process.env.NEXT_PUBLIC_OPCOS_URL ?? "";
@@ -374,7 +401,7 @@ export function ProductDetailPage({ id }: { id: string }) {
 							<Link key={rp.id} href={`/products/${rp.id}`} className="overflow-hidden rounded-xl border border-stone-200 bg-white transition-shadow hover:shadow-md">
 								<div className="relative aspect-[4/3] bg-stone-100">
 									{Array.isArray(rp.imageUrls) && rp.imageUrls[0] ? (
-										<Image src={String(rp.imageUrls[0])} alt={rp.titleTranslated ?? rp.titleOriginal ?? ""} fill className="object-cover" sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw" />
+										<SafeImage src={String(rp.imageUrls[0])} alt={rp.titleTranslated ?? rp.titleOriginal ?? ""} fill className="object-cover" sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw" />
 									) : null}
 								</div>
 								<div className="p-2">

@@ -46,9 +46,9 @@ describe("upsertProductsFromSync sync protection contract", () => {
 	});
 
 	it("allows viewing expired products on detail page", () => {
-		// getById 移除了 isPubliclyOrderableProduct 過濾，讓已截止商品仍可瀏覽（加入購物車按鈕會被 UI 層禁用）
+		// getById 不再有可購性過濾；已截止商品仍可瀏覽，加入購物車由 UI 層禁用
 		expect(productProcedureSource).toContain("getProductById");
-		expect(productProcedureSource).not.toContain('throw new ORPCError("NOT_FOUND", { message: "Product not found" });\n\t\tif (!isPubliclyOrderableProduct');
+		expect(productProcedureSource).not.toContain("isPubliclyOrderableProduct");
 	});
 
 	it("triggers background crawler when result.total < 5 without blocking", () => {

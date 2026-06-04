@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { SafeImage } from "../../shared/components/SafeImage";
 import Link from "next/link";
 
 import { DeadlineBadge } from "./DeadlineBadge";
@@ -33,7 +33,7 @@ export function NewArrivalsScroll({ items }: NewArrivalsScrollProps) {
 						className="card-hover min-w-[42vw] snap-start rounded-xl border border-stone-200 bg-white p-3 md:min-w-[220px]"
 					>
 						<div className="relative aspect-[4/3] overflow-hidden rounded-lg bg-stone-100">
-							{firstImage ? <Image src={firstImage} alt={title} fill sizes="160px" className="object-cover" /> : null}
+							{firstImage ? <SafeImage src={firstImage} alt={title} fill sizes="160px" className="object-cover" /> : null}
 						</div>
 						<div className="mt-2">
 							<DeadlineBadge orderDeadline={item.orderDeadline} />

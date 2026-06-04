@@ -20,7 +20,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { LayoutGridIcon, TableIcon } from "lucide-react";
-import Image from "next/image";
+import { SafeImage } from "../shared/components/SafeImage";
 import Link from "next/link";
 import { parseAsBoolean, parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
@@ -188,7 +188,7 @@ export function CategoryPage({ slug }: { slug: string }) {
 												<TableRow key={item.id}>
 													<TableCell>
 														{imageUrl ? (
-															<Image src={imageUrl} alt={title} width={40} height={40} className="size-10 rounded-md object-cover" />
+															<SafeImage src={imageUrl} alt={title} width={40} height={40} className="size-10 rounded-md object-cover" />
 														) : (
 															<div className="size-10 rounded-md bg-muted" />
 														)}

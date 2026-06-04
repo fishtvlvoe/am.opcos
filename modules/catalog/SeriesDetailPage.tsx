@@ -14,8 +14,36 @@ import { TableView } from "./components/TableView";
 import { ToolbarRow } from "./components/ToolbarRow";
 import type { QuickFilter } from "../shared/components/FilterSidebar";
 
+interface ProductItem {
+	id: string;
+	titleTranslated: string;
+	titleOriginal: string;
+	imageUrls: string[];
+	sourceUrl: string | null;
+	category: string | null;
+	series: string | null;
+	janCode: string | null;
+	brand: string | null;
+	franchise: string | null;
+	originalPrice: number | null;
+	sellingPrice: number | null;
+	listingDate: Date | null;
+	orderDeadline: Date | null;
+	releaseDate: Date | null;
+	inStock: boolean;
+}
+
+interface ProductsPageData {
+	items: ProductItem[];
+	total: number;
+	page: number;
+	pageSize: number;
+	totalPages: number;
+}
+
 interface SeriesDetailPageProps {
 	seriesId: string;
+	initialProductsData: ProductsPageData;
 }
 
 function Breadcrumb({ seriesName }: { seriesName: string }) {
@@ -34,7 +62,7 @@ function Breadcrumb({ seriesName }: { seriesName: string }) {
 	);
 }
 
-export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
+export function SeriesDetailPage({ seriesId, initialProductsData }: SeriesDetailPageProps) {
 	const { user } = useSession();
 	const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
 	const [sortField, setSortField] = useState("name");
@@ -81,8 +109,8 @@ export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
 		}),
 	);
 
-	const productsQuery = useQuery(
-		orpc.anismile.products.list.queryOptions({
+	const productsQuery = useQuery({
+		...orpc.anismile.products.list.queryOptions({
 			input: {
 				series: seriesId,
 				page,
@@ -92,7 +120,8 @@ export function SeriesDetailPage({ seriesId }: SeriesDetailPageProps) {
 				urgentDeadline: urgentFilter || undefined,
 			},
 		}),
-	);
+		initialData: initialProductsData,
+	});
 
 	const products = productsQuery.data?.items ?? [];
 	const totalProducts = productsQuery.data?.total ?? products.length;

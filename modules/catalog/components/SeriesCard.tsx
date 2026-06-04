@@ -1,7 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+
+import { SafeImage } from "../../shared/components/SafeImage";
 
 interface SeriesCardProps {
 	series: {
@@ -21,7 +22,7 @@ export function SeriesCard({ series }: SeriesCardProps) {
 			<div className="card-hover overflow-hidden rounded-xl border border-stone-200 bg-white transition-shadow hover:shadow-md">
 				<div className="relative aspect-square bg-stone-100">
 					{series.image ? (
-						<Image
+						<SafeImage
 							src={series.image}
 							alt={series.name}
 							fill

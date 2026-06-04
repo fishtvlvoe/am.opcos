@@ -50,14 +50,14 @@ describe("SeriesCard 元件", () => {
 		expect(source).toContain("件商品");
 	});
 
-	it("引入 next/image 的 Image 元件", () => {
+	it("引入 SafeImage 元件", () => {
 		const source = read(filePath);
-		expect(source).toContain('import Image from "next/image"');
+		expect(source).toContain('import { SafeImage } from "../../shared/components/SafeImage"');
 	});
 
-	it("使用 Image 元件並啟用 fill, sizes, object-cover 屬性/樣式", () => {
+	it("使用 SafeImage 元件並啟用 fill, sizes, object-cover 屬性/樣式", () => {
 		const source = read(filePath);
-		expect(source).toContain("<Image");
+		expect(source).toContain("<SafeImage");
 		expect(source).toContain("fill");
 		expect(source).toContain("sizes");
 		expect(source).toContain("object-cover");
