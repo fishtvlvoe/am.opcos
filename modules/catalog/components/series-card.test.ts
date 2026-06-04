@@ -49,4 +49,22 @@ describe("SeriesCard 元件", () => {
 		const source = read(filePath);
 		expect(source).toContain("件商品");
 	});
+
+	it("引入 next/image 的 Image 元件", () => {
+		const source = read(filePath);
+		expect(source).toContain('import Image from "next/image"');
+	});
+
+	it("使用 Image 元件並啟用 fill, sizes, object-cover 屬性/樣式", () => {
+		const source = read(filePath);
+		expect(source).toContain("<Image");
+		expect(source).toContain("fill");
+		expect(source).toContain("sizes");
+		expect(source).toContain("object-cover");
+	});
+
+	it("當無可用圖片時，有顯示 placeholder 文字「系列圖片」的機制", () => {
+		const source = read(filePath);
+		expect(source).toContain("系列圖片");
+	});
 });

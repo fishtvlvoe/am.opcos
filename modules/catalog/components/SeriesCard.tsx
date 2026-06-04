@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 
 interface SeriesCardProps {
@@ -20,7 +21,13 @@ export function SeriesCard({ series }: SeriesCardProps) {
 			<div className="card-hover overflow-hidden rounded-xl border border-stone-200 bg-white transition-shadow hover:shadow-md">
 				<div className="relative aspect-square bg-stone-100">
 					{series.image ? (
-						<img src={series.image} alt={series.name} className="size-full object-cover" />
+						<Image
+							src={series.image}
+							alt={series.name}
+							fill
+							sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+							className="object-cover"
+						/>
 					) : (
 						<div className="flex size-full items-center justify-center text-xs text-stone-500">系列圖片</div>
 					)}
