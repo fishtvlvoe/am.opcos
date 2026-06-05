@@ -25,3 +25,21 @@ The system SHALL parse the product cost/discount rate from the source API using 
 - **THEN** it SHALL record `productsWithDiscount` and `productsWithoutDiscount` in the sync log
 - **AND** if the discount ratio is below 10%
 - **THEN** it SHALL set `errorMessage` to an alert containing the ratio and actionable context
+
+## Requirement: Auth state must match the actual authentication mechanism
+
+The system SHALL set `sourceAuthState` to `"authenticated"` when authenticated credentials are used to fetch data, and to `"public"` only when no authentication is used.
+
+### Scenario: Authenticated crawl uses authenticated cookie
+
+- **GIVEN** the crawler logs in with `ANISMILE_EMAIL` and `ANISMILE_PASSWORD` to obtain a cookie
+- **WHEN** it parses the product response
+- **THEN** `sourceAuthState` SHALL be `"authenticated"`
+- **AND** `upsertProductsFromSync` SHALL NOT trigger `preserveExistingSourcePricingTruth`
+
+### Scenario: Stale pricing detection
+
+- **GIVEN** an existing product has pricing data
+- **AND** a new crawl returns different pricing values
+- **AND** `preserveExistingSourcePricingTruth` is true
+- **THEN** the system SHALL log a warning with the product ID and both old/new pricing values

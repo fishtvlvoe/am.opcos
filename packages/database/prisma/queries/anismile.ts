@@ -1,6 +1,7 @@
 import { db } from "../client";
 import { Prisma } from "../generated/client";
 import { calculateBacksolveSellingPrice } from "./backsolve-pricing";
+import { logger } from "@repo/logs";
 
 const DEFAULT_BACKSOLVE_PERCENT_KEY = "default_backsolve_percent";
 const DEFAULT_BACKSOLVE_PERCENT_VALUE = "0";
@@ -625,6 +626,28 @@ export async function upsertProductsFromSync(
 				Boolean(existing) &&
 				!hasAuthenticatedSourcePricing &&
 				(existing?.discountRate != null || existing?.sourceUrl != null);
+
+			// Stale-pricing alert: if we're preserving existing pricing but the new crawl
+			// has different values, this may indicate an auth state mismatch bug
+			if (preserveExistingSourcePricingTruth && existing) {
+				const newCostDiffers =
+					product.costPrice != null &&
+					existing.costPrice != null &&
+					Math.abs(product.costPrice - Number(existing.costPrice)) > 0.01;
+				const newDiscountDiffers =
+					product.discountRate != null &&
+					existing.discountRate != null &&
+					Math.abs(product.discountRate / 100 - Number(existing.discountRate)) > 0.001;
+				if (newCostDiffers || newDiscountDiffers) {
+					logger.warn(
+						`[upsertProductsFromSync] Stale pricing preserved for ${product.supplierId}: ` +
+						`new crawl has cost=${product.costPrice}/discount=${product.discountRate}% ` +
+						`but existing is cost=${existing.costPrice}/discount=${existing.discountRate}. ` +
+						`Check if sourceAuthState matches the actual auth mechanism used.`,
+					);
+				}
+			}
+
 			const originalPrice =
 				preserveExistingSourcePricingTruth && existing?.originalPrice !== null && existing?.originalPrice !== undefined
 					? existing.originalPrice

@@ -85,6 +85,59 @@ describe("parseProductApi — new field extraction", () => {
 		const result = parseProductApiForTest(res);
 		expect(result?.inStock).toBe(false);
 	});
+
+	it("falls back to price_percent when percent.status !== 1", () => {
+		const res = {
+			code: 1,
+			item: { ...BASE_ITEM, percent: { status: 0, percent: "85.00" }, price_percent: "70" },
+		};
+		const result = parseProductApiForTest(res);
+		expect(result?.discountRate).toBe(70);
+		expect(result?.costPrice).toBe(700); // 1000 * 70 / 100 = 700
+	});
+
+	it("ignores price_percent when percent.status === 1", () => {
+		const res = {
+			code: 1,
+			item: { ...BASE_ITEM, percent: { status: 1, percent: "85.00" }, price_percent: "70" },
+		};
+		const result = parseProductApiForTest(res);
+		expect(result?.discountRate).toBe(85);
+		expect(result?.costPrice).toBe(850); // 1000 * 85 / 100 = 850
+	});
+
+	it("ignores invalid price_percent values", () => {
+		const res = {
+			code: 1,
+			item: { ...BASE_ITEM, percent: { status: 0, percent: "85.00" }, price_percent: "150" },
+		};
+		const result = parseProductApiForTest(res);
+		// 150 > 100 so it should be ignored, discountRate stays null
+		expect(result?.discountRate).toBeNull();
+		expect(result?.costPrice).toBe(1000); // fallback to originalPrice
+	});
+
+	it("ignores price_percent=0", () => {
+		const res = {
+			code: 1,
+			item: { ...BASE_ITEM, percent: { status: 0, percent: "85.00" }, price_percent: "0" },
+		};
+		const result = parseProductApiForTest(res);
+		expect(result?.discountRate).toBeNull();
+		expect(result?.costPrice).toBe(1000);
+	});
+
+	it("sets sourceAuthState to authenticated when passed explicitly", () => {
+		const res = { code: 1, item: BASE_ITEM };
+		const result = parseProductApiForTest(res, undefined, "authenticated");
+		expect(result?.sourceAuthState).toBe("authenticated");
+	});
+
+	it("defaults sourceAuthState to public when not passed", () => {
+		const res = { code: 1, item: BASE_ITEM };
+		const result = parseProductApiForTest(res);
+		expect(result?.sourceAuthState).toBe("public");
+	});
 });
 
 describe("series page product discovery", () => {
