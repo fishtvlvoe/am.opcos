@@ -130,5 +130,7 @@ describe("series page product discovery", () => {
 			.toBe("薰る花は凛と咲く・yline・6月21日截单");
 		expect(normalizeSeriesLookup("薰る花は凛と咲く・Yline・6月21日截單"))
 			.toBe("薰る花は凛と咲く・yline・6月21日截单");
+		expect(normalizeSeriesLookup("ご注文はうさぎですか？BLOOM・6月17日截单"))
+			.toBe("ご注文はうさぎですか?bloom・6月17日截单");
 	});
 });

@@ -264,6 +264,7 @@ export function normalizeSeriesLookup(value: string) {
 		.replaceAll("　", " ")
 		.replaceAll("薫", "薰")
 		.replaceAll("凜", "凛")
+		.replaceAll("？", "?")
 		.toLowerCase()
 		.trim();
 }

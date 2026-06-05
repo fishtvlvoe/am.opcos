@@ -279,6 +279,8 @@ export async function listAnismileProducts({
 			variants.push(s.replaceAll("薫", "薰").replaceAll("凜", "凛").replaceAll("截单", "截單"));
 			variants.push(s.replaceAll("薰", "薫").replaceAll("凛", "凜").replaceAll("截单", "截單"));
 			variants.push(s.replaceAll("！", "!"));
+			variants.push(s.replaceAll("？", "?"));
+			variants.push(s.replaceAll("?", "？"));
 			return variants;
 		};
 		const seriesTerms = Array.from(
