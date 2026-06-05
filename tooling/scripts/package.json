@@ -7,6 +7,7 @@
 		"probe:am-catalog-visibility": "tsx ./src/am-catalog-visibility-probe.ts",
 		"create:user": "dotenv -c -e ../../.env -- tsx ./src/create-user.ts",
 		"repair:anismile-pricing-truth": "dotenv -c -e ../../.env -- tsx ./src/repair-anismile-pricing-truth.ts",
+		"full-resync-pricing": "dotenv -c -e ../../.env -- tsx ./src/full-resync-pricing.ts",
 		"type-check": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -19,6 +20,7 @@
 	"devDependencies": {
 		"@repo/tsconfig": "workspace:*",
 		"@types/node": "catalog:",
+		"dotenv-cli": "catalog:",
 		"nanoid": "catalog:",
 		"tsx": "catalog:",
 		"typescript": "catalog:"

@@ -453,7 +453,7 @@ export async function crawlAnismileProductsWithStats({
 				body: new URLSearchParams({ item: id, lang: "cn" }),
 			});
 
-			const parsed = parseProductApi(res, id);
+			const parsed = parseProductApi(res, id, "authenticated");
 			if (parsed) {
 				parsed.listingDate ??= listingDate;
 				products.push(parsed);

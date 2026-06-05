@@ -753,6 +753,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.6.0
+      dotenv-cli:
+        specifier: 'catalog:'
+        version: 11.0.0
       nanoid:
         specifier: 'catalog:'
         version: 5.1.11
