@@ -789,6 +789,14 @@ export async function addToCart({
 		throw new Error("Product order deadline has passed");
 	}
 
+	// read-before-write：查現有數量，計算累加後的上限值（最大 999）
+	const existing = await db.anismileCartItem.findUnique({
+		where: { userId_productId: { userId, productId } },
+		select: { quantity: true },
+	});
+	const currentQty = existing?.quantity ?? 0;
+	const newQty = Math.min(currentQty + quantity, 999);
+
 	return await db.anismileCartItem.upsert({
 		where: {
 			userId_productId: {
@@ -799,12 +807,10 @@ export async function addToCart({
 		create: {
 			userId,
 			productId,
-			quantity,
+			quantity: Math.min(quantity, 999),
 		},
 		update: {
-			quantity: {
-				increment: quantity,
-			},
+			quantity: newQty,
 		},
 		include: {
 			product: true,
