@@ -25,6 +25,10 @@ export function AdminSyncPage() {
 	// 偵測是否有進行中的同步（防止重複觸發）
 	const hasRunning = (logsQuery.data ?? []).some((row) => row.status === "running");
 
+	// 最近一次 sync log 若含 [discount-alert]，顯示警告橫幅
+	const latestSyncLog = (logsQuery.data ?? [])[0];
+	const hasDiscountAlert = latestSyncLog?.errorMessage?.includes("[discount-alert]") ?? false;
+
 	const syncMutation = useMutation(
 		orpc.anismile.sync.mutationOptions({
 			onSuccess: (result) => {
@@ -41,6 +45,11 @@ export function AdminSyncPage() {
 
 	return (
 		<div className="space-y-4">
+			{hasDiscountAlert && latestSyncLog && (
+				<div className="rounded border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+					⚠️ 折扣警報：{latestSyncLog.errorMessage}
+				</div>
+			)}
 			<div className="flex items-center justify-between">
 				<h1 className="font-semibold text-2xl">同步管理</h1>
 				<div className="flex items-center gap-3">
