@@ -5,6 +5,7 @@ import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { orpc } from "@shared/lib/orpc-query-utils";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import Image from "next/image";
 import Link from "next/link";
 
 const statusLabels: Record<string, string> = {
@@ -83,11 +84,12 @@ export function OrderDetailPage({ id, isConfirmation = false }: { id: string; is
 						<div key={item.id} className="flex items-center justify-between border-b pb-3 last:border-b-0">
 							<div className="flex items-center gap-3">
 								{imageUrl ? (
-									<img
+									<Image
 										src={imageUrl}
 										alt=""
-										className="h-12 w-12 shrink-0 rounded-md border border-stone-200 object-cover"
-										loading="lazy"
+										width={48}
+										height={48}
+										className="shrink-0 rounded-md border border-stone-200 object-cover"
 									/>
 								) : (
 									<div className="h-12 w-12 shrink-0 rounded-md border border-dashed border-stone-200 bg-stone-50" />

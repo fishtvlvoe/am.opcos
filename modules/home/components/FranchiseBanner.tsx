@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
@@ -31,10 +32,12 @@ export function FranchiseBanner({ items }: FranchiseBannerProps) {
 				{group.map((item) => {
 					const content = (
 						<>
-						<img
+						<Image
 							src={item.image}
 							alt={item.name}
-							className="size-full object-cover"
+							fill
+							sizes="(max-width: 768px) 100vw, 33vw"
+							className="object-cover"
 						/>
 							{item.copyrightText && (
 								<span

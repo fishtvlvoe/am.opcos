@@ -2,6 +2,7 @@
 
 import { cn } from "@repo/ui";
 import { format } from "date-fns";
+import Image from "next/image";
 import Link from "next/link";
 
 const statusMeta = {
@@ -39,12 +40,13 @@ export function OrderCard({ id, status, totalAmount, createdAt, itemCount, image
 				{displayImages.length > 0 ? (
 					<>
 						{displayImages.map((src, index) => (
-							<img
+							<Image
 								key={`${id}-${src}-${index}`}
 								src={src}
 								alt=""
-								className="h-8 w-8 rounded-md border border-stone-200 object-cover"
-								loading="lazy"
+								width={32}
+								height={32}
+								className="rounded-md border border-stone-200 object-cover"
 							/>
 						))}
 						{remainCount > 0 ? (

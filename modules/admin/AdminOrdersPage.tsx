@@ -5,6 +5,7 @@ import { orpc } from "@shared/lib/orpc-query-utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
+import Image from "next/image";
 import { useMemo, useState } from "react";
 
 const statuses = ["pending", "confirmed", "shipped", "completed", "cancelled"] as const;
@@ -188,11 +189,12 @@ export function AdminOrdersPage() {
 							<TableCell>{row.user.name}</TableCell>
 							<TableCell>
 								{thumbnailUrl ? (
-									<img
+									<Image
 										src={thumbnailUrl}
 										alt=""
-										className="h-6 w-6 rounded border border-stone-200 object-cover"
-										loading="lazy"
+										width={24}
+										height={24}
+										className="rounded border border-stone-200 object-cover"
 									/>
 								) : (
 									<div className="h-6 w-6 rounded border border-dashed border-stone-200 bg-stone-50" />

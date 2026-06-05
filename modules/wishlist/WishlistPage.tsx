@@ -4,6 +4,7 @@ import { Badge, Button, Input, toastError, toastSuccess } from "@repo/ui";
 import { orpc } from "@shared/lib/orpc-query-utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { HeartIcon, ShoppingCartIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -123,14 +124,16 @@ export function WishlistPage() {
 							<Link href={`/products/${item.productId}`} className="block">
 								<div className="aspect-square overflow-hidden bg-muted">
 									{item.product.imageUrls ? (
-										<img
+										<Image
 											src={
 												Array.isArray(item.product.imageUrls)
 													? (item.product.imageUrls[0] as string)
 													: ""
 											}
 											alt={item.product.title ?? "商品"}
-											className="size-full object-cover"
+											fill
+										sizes="(max-width: 768px) 50vw, 20vw"
+										className="object-cover"
 										/>
 									) : (
 										<div className="flex size-full items-center justify-center text-xs text-muted-foreground">

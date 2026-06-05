@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@repo/ui";
 import { orpc } from "@shared/lib/orpc-query-utils";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import Image from "next/image";
 import { useState } from "react";
 
 type OrderRow = {
@@ -164,11 +165,12 @@ export function OrderTable({
 									<td className="px-2 py-2">{row.user.name}</td>
 									<td className="px-2 py-2">
 										{row.thumbnailUrl ? (
-											<img
+											<Image
 												src={row.thumbnailUrl}
 												alt=""
-												className="h-6 w-6 rounded border border-stone-200 object-cover"
-												loading="lazy"
+												width={24}
+												height={24}
+												className="rounded border border-stone-200 object-cover"
 											/>
 										) : (
 											<div className="h-6 w-6 rounded border border-dashed border-stone-200 bg-stone-50" />
