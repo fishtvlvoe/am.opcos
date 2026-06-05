@@ -1,0 +1,712 @@
+# order-safety Specification
+
+## Purpose
+
+TBD - created by archiving change 'anismile-code-review-remediation'. Update Purpose after archive.
+
+## Requirements
+
+### Requirement: CSV import quantities are valid
+CSV order import SHALL reject non-integer, zero, negative, and excessive quantities before creating an order.
+
+#### Scenario: CSV contains invalid quantity
+- **WHEN** a user uploads or submits a CSV row with an invalid quantity
+- **THEN** the system rejects the import and does not create an order.
+
+
+<!-- @trace
+source: anismile-code-review-remediation
+updated: 2026-06-05
+code:
+  - modules/catalog/CatalogPage.tsx
+  - app/(public)/series/[id]/page.tsx
+  - packages/database/drizzle/queries/users.ts
+  - packages/api/modules/anismile/procedures/homepage.ts
+  - packages/database/prisma/queries/anismile.ts
+  - modules/orders/OrdersPage.tsx
+  - modules/shared/components/AppNav.tsx
+  - packages/api/modules/anismile/procedures/settings.ts
+  - packages/database/prisma/index.ts
+  - modules/admin/components/OrderTable.tsx
+  - packages/api/modules/anismile/lib/opencc.ts
+  - .spectra.yaml
+  - packages/database/prisma/queries/users.ts
+  - app/api/[[...rest]]/route.ts
+  - modules/detail/ProductDetailPage.tsx
+  - modules/shared/components/PublicHeader.tsx
+  - modules/catalog/components/PriceDisplay.tsx
+  - packages/auth/auth.ts
+  - tooling/scripts/src/am-catalog-visibility-lib.ts
+  - modules/catalog/CategoryPage.tsx
+  - packages/api/modules/anismile/router.ts
+  - tooling/scripts/package.json
+  - packages/database/prisma/migrations/20260605042800_add_anismile_series_table/migration.sql
+  - app/(public)/products/[id]/page.tsx
+  - packages/api/modules/anismile/lib/r2-image-cache.ts
+  - app/(authenticated)/checkout/success/page.tsx
+  - app/api/webhooks/stripe/route.ts
+  - modules/home/components/AnnouncementBanner.tsx
+  - CLAUDE.md
+  - modules/admin/AdminCustomersPage.tsx
+  - public/demo-gap-analysis.html
+  - tooling/scripts/src/create-user.ts
+  - modules/admin/DashboardPage.tsx
+  - app/(authenticated)/layout.tsx
+  - modules/catalog/SeriesDetailPage.tsx
+  - packages/sync/src/crawler.ts
+  - app/(authenticated)/admin/sync/page.tsx
+  - config.ts
+  - packages/api/orpc/procedures.ts
+  - app/(public)/search/page.tsx
+  - modules/catalog/components/SearchResultTable.tsx
+  - packages/database/index.ts
+  - .env.example
+  - modules/home/components/InstockSection.tsx
+  - tooling/scripts/src/test-db.ts
+  - modules/home/components/DeadlineSection.tsx
+  - AGENTS.md
+  - modules/admin/components/EditProductModal.tsx
+  - packages/api/modules/anismile/lib/crawler.ts
+  - packages/api/modules/anismile/procedures/cart.ts
+  - modules/catalog/components/FeaturedCarousel.tsx
+  - modules/catalog/components/SeriesCard.tsx
+  - packages/database/prisma/queries/index.ts
+  - app/(authenticated)/admin/page.tsx
+  - modules/admin/AdminSettingsPage.tsx
+  - packages/database/prisma/zod/index.ts
+  - packages/api/modules/anismile/procedures/orders.ts
+  - modules/catalog/components/NewArrivalsScroll.tsx
+  - modules/detail/components/ImageGallery.tsx
+  - modules/catalog/components/TableView.tsx
+  - modules/orders/components/OrderCard.tsx
+  - packages/database/prisma/queries/backsolve-pricing.ts
+  - modules/admin/AdminProductsPage.tsx
+  - app/(authenticated)/admin/settings/page.tsx
+  - packages/database/prisma/seed-anismile.ts
+  - modules/catalog/components/ProductCard.tsx
+  - packages/api/modules/anismile/procedures/products.ts
+  - package.json
+  - packages/api/package.json
+  - packages/api/modules/anismile/procedures/product-pool.ts
+  - GEMINI.md
+  - modules/shared/lib/public-prefetch.ts
+  - app/api/cron.ts
+  - packages/api/modules/anismile/lib/series-sync.ts
+  - modules/cart/components/CartItem.tsx
+  - modules/shared/components/SafeImage.tsx
+  - packages/api/modules/anismile/procedures/import-order.ts
+  - modules/member/MemberTierPage.tsx
+  - modules/catalog/SearchPage.tsx
+  - app/(public)/page.tsx
+  - packages/database/image-utils.ts
+  - tsconfig.json
+  - app/(authenticated)/admin/orders/page.tsx
+  - tooling/scripts/src/repair-anismile-pricing-truth.ts
+  - modules/orders/OrderDetailPage.tsx
+  - packages/database/prisma/schema.prisma
+  - scripts/fix-simplified-chinese.ts
+  - modules/home/HomePage.tsx
+  - pnpm-workspace.yaml
+  - tooling/scripts/src/am-catalog-visibility-probe.ts
+  - packages/api/modules/anismile/procedures/sync.ts
+tests:
+  - packages/api/modules/anismile/procedures/homepage.test.ts
+  - packages/api/modules/anismile/procedures/homepage-series-visibility.test.ts
+  - e2e/visual-diff.spec.ts
+  - modules/catalog/series-detail-page.test.ts
+  - tooling/scripts/src/am-catalog-visibility-lib.test.ts
+  - packages/api/modules/anismile/procedures/product-sync-protection.test.ts
+  - packages/database/prisma/queries/anismile-series-migration.test.ts
+  - app/api/cron-safety.test.ts
+  - packages/api/modules/anismile/procedures/backsolve-pricing-contract.test.ts
+  - packages/database/prisma/queries/anismile-search-filters.test.ts
+  - app/api/route-removal.test.ts
+  - packages/database/prisma/queries/anismile.backsolve-pricing.test.ts
+  - packages/api/modules/anismile/lib/crawler.test.ts
+  - modules/catalog/components/series-card.test.ts
+  - packages/database/prisma/queries/anismile-series-exact-match.test.ts
+  - modules/admin/admin-settings-backsolve-percent.test.ts
+  - e2e/search-reference-parity.spec.ts
+  - modules/home/components/deadline-section.test.ts
+  - packages/api/modules/anismile/procedures/public-pricing-visibility.test.ts
+  - modules/detail/product-detail-page.test.ts
+  - packages/api/modules/anismile/procedures/code-review-remediation.test.ts
+  - modules/admin/admin-products-page.test.ts
+  - modules/catalog/components/product-card.test.ts
+  - packages/api/modules/anismile/procedures/public-catalog-visibility.test.ts
+  - packages/api/orpc/procedures.test.ts
+  - modules/catalog/search-page.test.ts
+  - modules/catalog/components/table-view.test.ts
+  - packages/api/modules/anismile/procedures/product-source-auth-refresh.test.ts
+  - packages/api/modules/anismile/procedures/tier-settings-sync-contract.test.ts
+  - packages/database/prisma/queries/anismile-search-japanese-visibility.test.ts
+  - modules/home/home-page-performance.test.tsx
+  - packages/auth/customer-role-contract.test.ts
+  - modules/catalog/search-page-performance.test.tsx
+  - modules/shared/components/public-header.test.ts
+-->
+
+---
+### Requirement: Import order confirmation respects product availability
+Import order confirmation SHALL reject products that are unavailable or past their order deadline.
+
+#### Scenario: Imported product is unavailable
+- **WHEN** a matched imported product is no longer in stock or is past its order deadline
+- **THEN** order creation is rejected with a customer-safe message.
+
+
+<!-- @trace
+source: anismile-code-review-remediation
+updated: 2026-06-05
+code:
+  - modules/catalog/CatalogPage.tsx
+  - app/(public)/series/[id]/page.tsx
+  - packages/database/drizzle/queries/users.ts
+  - packages/api/modules/anismile/procedures/homepage.ts
+  - packages/database/prisma/queries/anismile.ts
+  - modules/orders/OrdersPage.tsx
+  - modules/shared/components/AppNav.tsx
+  - packages/api/modules/anismile/procedures/settings.ts
+  - packages/database/prisma/index.ts
+  - modules/admin/components/OrderTable.tsx
+  - packages/api/modules/anismile/lib/opencc.ts
+  - .spectra.yaml
+  - packages/database/prisma/queries/users.ts
+  - app/api/[[...rest]]/route.ts
+  - modules/detail/ProductDetailPage.tsx
+  - modules/shared/components/PublicHeader.tsx
+  - modules/catalog/components/PriceDisplay.tsx
+  - packages/auth/auth.ts
+  - tooling/scripts/src/am-catalog-visibility-lib.ts
+  - modules/catalog/CategoryPage.tsx
+  - packages/api/modules/anismile/router.ts
+  - tooling/scripts/package.json
+  - packages/database/prisma/migrations/20260605042800_add_anismile_series_table/migration.sql
+  - app/(public)/products/[id]/page.tsx
+  - packages/api/modules/anismile/lib/r2-image-cache.ts
+  - app/(authenticated)/checkout/success/page.tsx
+  - app/api/webhooks/stripe/route.ts
+  - modules/home/components/AnnouncementBanner.tsx
+  - CLAUDE.md
+  - modules/admin/AdminCustomersPage.tsx
+  - public/demo-gap-analysis.html
+  - tooling/scripts/src/create-user.ts
+  - modules/admin/DashboardPage.tsx
+  - app/(authenticated)/layout.tsx
+  - modules/catalog/SeriesDetailPage.tsx
+  - packages/sync/src/crawler.ts
+  - app/(authenticated)/admin/sync/page.tsx
+  - config.ts
+  - packages/api/orpc/procedures.ts
+  - app/(public)/search/page.tsx
+  - modules/catalog/components/SearchResultTable.tsx
+  - packages/database/index.ts
+  - .env.example
+  - modules/home/components/InstockSection.tsx
+  - tooling/scripts/src/test-db.ts
+  - modules/home/components/DeadlineSection.tsx
+  - AGENTS.md
+  - modules/admin/components/EditProductModal.tsx
+  - packages/api/modules/anismile/lib/crawler.ts
+  - packages/api/modules/anismile/procedures/cart.ts
+  - modules/catalog/components/FeaturedCarousel.tsx
+  - modules/catalog/components/SeriesCard.tsx
+  - packages/database/prisma/queries/index.ts
+  - app/(authenticated)/admin/page.tsx
+  - modules/admin/AdminSettingsPage.tsx
+  - packages/database/prisma/zod/index.ts
+  - packages/api/modules/anismile/procedures/orders.ts
+  - modules/catalog/components/NewArrivalsScroll.tsx
+  - modules/detail/components/ImageGallery.tsx
+  - modules/catalog/components/TableView.tsx
+  - modules/orders/components/OrderCard.tsx
+  - packages/database/prisma/queries/backsolve-pricing.ts
+  - modules/admin/AdminProductsPage.tsx
+  - app/(authenticated)/admin/settings/page.tsx
+  - packages/database/prisma/seed-anismile.ts
+  - modules/catalog/components/ProductCard.tsx
+  - packages/api/modules/anismile/procedures/products.ts
+  - package.json
+  - packages/api/package.json
+  - packages/api/modules/anismile/procedures/product-pool.ts
+  - GEMINI.md
+  - modules/shared/lib/public-prefetch.ts
+  - app/api/cron.ts
+  - packages/api/modules/anismile/lib/series-sync.ts
+  - modules/cart/components/CartItem.tsx
+  - modules/shared/components/SafeImage.tsx
+  - packages/api/modules/anismile/procedures/import-order.ts
+  - modules/member/MemberTierPage.tsx
+  - modules/catalog/SearchPage.tsx
+  - app/(public)/page.tsx
+  - packages/database/image-utils.ts
+  - tsconfig.json
+  - app/(authenticated)/admin/orders/page.tsx
+  - tooling/scripts/src/repair-anismile-pricing-truth.ts
+  - modules/orders/OrderDetailPage.tsx
+  - packages/database/prisma/schema.prisma
+  - scripts/fix-simplified-chinese.ts
+  - modules/home/HomePage.tsx
+  - pnpm-workspace.yaml
+  - tooling/scripts/src/am-catalog-visibility-probe.ts
+  - packages/api/modules/anismile/procedures/sync.ts
+tests:
+  - packages/api/modules/anismile/procedures/homepage.test.ts
+  - packages/api/modules/anismile/procedures/homepage-series-visibility.test.ts
+  - e2e/visual-diff.spec.ts
+  - modules/catalog/series-detail-page.test.ts
+  - tooling/scripts/src/am-catalog-visibility-lib.test.ts
+  - packages/api/modules/anismile/procedures/product-sync-protection.test.ts
+  - packages/database/prisma/queries/anismile-series-migration.test.ts
+  - app/api/cron-safety.test.ts
+  - packages/api/modules/anismile/procedures/backsolve-pricing-contract.test.ts
+  - packages/database/prisma/queries/anismile-search-filters.test.ts
+  - app/api/route-removal.test.ts
+  - packages/database/prisma/queries/anismile.backsolve-pricing.test.ts
+  - packages/api/modules/anismile/lib/crawler.test.ts
+  - modules/catalog/components/series-card.test.ts
+  - packages/database/prisma/queries/anismile-series-exact-match.test.ts
+  - modules/admin/admin-settings-backsolve-percent.test.ts
+  - e2e/search-reference-parity.spec.ts
+  - modules/home/components/deadline-section.test.ts
+  - packages/api/modules/anismile/procedures/public-pricing-visibility.test.ts
+  - modules/detail/product-detail-page.test.ts
+  - packages/api/modules/anismile/procedures/code-review-remediation.test.ts
+  - modules/admin/admin-products-page.test.ts
+  - modules/catalog/components/product-card.test.ts
+  - packages/api/modules/anismile/procedures/public-catalog-visibility.test.ts
+  - packages/api/orpc/procedures.test.ts
+  - modules/catalog/search-page.test.ts
+  - modules/catalog/components/table-view.test.ts
+  - packages/api/modules/anismile/procedures/product-source-auth-refresh.test.ts
+  - packages/api/modules/anismile/procedures/tier-settings-sync-contract.test.ts
+  - packages/database/prisma/queries/anismile-search-japanese-visibility.test.ts
+  - modules/home/home-page-performance.test.tsx
+  - packages/auth/customer-role-contract.test.ts
+  - modules/catalog/search-page-performance.test.tsx
+  - modules/shared/components/public-header.test.ts
+-->
+
+---
+### Requirement: Checkout blocks unavailable cart items
+Checkout SHALL prevent order submission when the cart contains unavailable products.
+
+#### Scenario: User reaches checkout with unavailable item
+- **WHEN** the cart has any item with an unavailable reason
+- **THEN** the checkout submit action is disabled
+- **AND** submitting is blocked before the checkout mutation runs.
+
+
+<!-- @trace
+source: anismile-code-review-remediation
+updated: 2026-06-05
+code:
+  - modules/catalog/CatalogPage.tsx
+  - app/(public)/series/[id]/page.tsx
+  - packages/database/drizzle/queries/users.ts
+  - packages/api/modules/anismile/procedures/homepage.ts
+  - packages/database/prisma/queries/anismile.ts
+  - modules/orders/OrdersPage.tsx
+  - modules/shared/components/AppNav.tsx
+  - packages/api/modules/anismile/procedures/settings.ts
+  - packages/database/prisma/index.ts
+  - modules/admin/components/OrderTable.tsx
+  - packages/api/modules/anismile/lib/opencc.ts
+  - .spectra.yaml
+  - packages/database/prisma/queries/users.ts
+  - app/api/[[...rest]]/route.ts
+  - modules/detail/ProductDetailPage.tsx
+  - modules/shared/components/PublicHeader.tsx
+  - modules/catalog/components/PriceDisplay.tsx
+  - packages/auth/auth.ts
+  - tooling/scripts/src/am-catalog-visibility-lib.ts
+  - modules/catalog/CategoryPage.tsx
+  - packages/api/modules/anismile/router.ts
+  - tooling/scripts/package.json
+  - packages/database/prisma/migrations/20260605042800_add_anismile_series_table/migration.sql
+  - app/(public)/products/[id]/page.tsx
+  - packages/api/modules/anismile/lib/r2-image-cache.ts
+  - app/(authenticated)/checkout/success/page.tsx
+  - app/api/webhooks/stripe/route.ts
+  - modules/home/components/AnnouncementBanner.tsx
+  - CLAUDE.md
+  - modules/admin/AdminCustomersPage.tsx
+  - public/demo-gap-analysis.html
+  - tooling/scripts/src/create-user.ts
+  - modules/admin/DashboardPage.tsx
+  - app/(authenticated)/layout.tsx
+  - modules/catalog/SeriesDetailPage.tsx
+  - packages/sync/src/crawler.ts
+  - app/(authenticated)/admin/sync/page.tsx
+  - config.ts
+  - packages/api/orpc/procedures.ts
+  - app/(public)/search/page.tsx
+  - modules/catalog/components/SearchResultTable.tsx
+  - packages/database/index.ts
+  - .env.example
+  - modules/home/components/InstockSection.tsx
+  - tooling/scripts/src/test-db.ts
+  - modules/home/components/DeadlineSection.tsx
+  - AGENTS.md
+  - modules/admin/components/EditProductModal.tsx
+  - packages/api/modules/anismile/lib/crawler.ts
+  - packages/api/modules/anismile/procedures/cart.ts
+  - modules/catalog/components/FeaturedCarousel.tsx
+  - modules/catalog/components/SeriesCard.tsx
+  - packages/database/prisma/queries/index.ts
+  - app/(authenticated)/admin/page.tsx
+  - modules/admin/AdminSettingsPage.tsx
+  - packages/database/prisma/zod/index.ts
+  - packages/api/modules/anismile/procedures/orders.ts
+  - modules/catalog/components/NewArrivalsScroll.tsx
+  - modules/detail/components/ImageGallery.tsx
+  - modules/catalog/components/TableView.tsx
+  - modules/orders/components/OrderCard.tsx
+  - packages/database/prisma/queries/backsolve-pricing.ts
+  - modules/admin/AdminProductsPage.tsx
+  - app/(authenticated)/admin/settings/page.tsx
+  - packages/database/prisma/seed-anismile.ts
+  - modules/catalog/components/ProductCard.tsx
+  - packages/api/modules/anismile/procedures/products.ts
+  - package.json
+  - packages/api/package.json
+  - packages/api/modules/anismile/procedures/product-pool.ts
+  - GEMINI.md
+  - modules/shared/lib/public-prefetch.ts
+  - app/api/cron.ts
+  - packages/api/modules/anismile/lib/series-sync.ts
+  - modules/cart/components/CartItem.tsx
+  - modules/shared/components/SafeImage.tsx
+  - packages/api/modules/anismile/procedures/import-order.ts
+  - modules/member/MemberTierPage.tsx
+  - modules/catalog/SearchPage.tsx
+  - app/(public)/page.tsx
+  - packages/database/image-utils.ts
+  - tsconfig.json
+  - app/(authenticated)/admin/orders/page.tsx
+  - tooling/scripts/src/repair-anismile-pricing-truth.ts
+  - modules/orders/OrderDetailPage.tsx
+  - packages/database/prisma/schema.prisma
+  - scripts/fix-simplified-chinese.ts
+  - modules/home/HomePage.tsx
+  - pnpm-workspace.yaml
+  - tooling/scripts/src/am-catalog-visibility-probe.ts
+  - packages/api/modules/anismile/procedures/sync.ts
+tests:
+  - packages/api/modules/anismile/procedures/homepage.test.ts
+  - packages/api/modules/anismile/procedures/homepage-series-visibility.test.ts
+  - e2e/visual-diff.spec.ts
+  - modules/catalog/series-detail-page.test.ts
+  - tooling/scripts/src/am-catalog-visibility-lib.test.ts
+  - packages/api/modules/anismile/procedures/product-sync-protection.test.ts
+  - packages/database/prisma/queries/anismile-series-migration.test.ts
+  - app/api/cron-safety.test.ts
+  - packages/api/modules/anismile/procedures/backsolve-pricing-contract.test.ts
+  - packages/database/prisma/queries/anismile-search-filters.test.ts
+  - app/api/route-removal.test.ts
+  - packages/database/prisma/queries/anismile.backsolve-pricing.test.ts
+  - packages/api/modules/anismile/lib/crawler.test.ts
+  - modules/catalog/components/series-card.test.ts
+  - packages/database/prisma/queries/anismile-series-exact-match.test.ts
+  - modules/admin/admin-settings-backsolve-percent.test.ts
+  - e2e/search-reference-parity.spec.ts
+  - modules/home/components/deadline-section.test.ts
+  - packages/api/modules/anismile/procedures/public-pricing-visibility.test.ts
+  - modules/detail/product-detail-page.test.ts
+  - packages/api/modules/anismile/procedures/code-review-remediation.test.ts
+  - modules/admin/admin-products-page.test.ts
+  - modules/catalog/components/product-card.test.ts
+  - packages/api/modules/anismile/procedures/public-catalog-visibility.test.ts
+  - packages/api/orpc/procedures.test.ts
+  - modules/catalog/search-page.test.ts
+  - modules/catalog/components/table-view.test.ts
+  - packages/api/modules/anismile/procedures/product-source-auth-refresh.test.ts
+  - packages/api/modules/anismile/procedures/tier-settings-sync-contract.test.ts
+  - packages/database/prisma/queries/anismile-search-japanese-visibility.test.ts
+  - modules/home/home-page-performance.test.tsx
+  - packages/auth/customer-role-contract.test.ts
+  - modules/catalog/search-page-performance.test.tsx
+  - modules/shared/components/public-header.test.ts
+-->
+
+---
+### Requirement: Admin order export is manual
+The admin order export query SHALL run only when the admin explicitly requests CSV export.
+
+#### Scenario: Admin opens order list
+- **WHEN** an admin opens the orders page
+- **THEN** the CSV export query is not executed automatically.
+
+
+<!-- @trace
+source: anismile-code-review-remediation
+updated: 2026-06-05
+code:
+  - modules/catalog/CatalogPage.tsx
+  - app/(public)/series/[id]/page.tsx
+  - packages/database/drizzle/queries/users.ts
+  - packages/api/modules/anismile/procedures/homepage.ts
+  - packages/database/prisma/queries/anismile.ts
+  - modules/orders/OrdersPage.tsx
+  - modules/shared/components/AppNav.tsx
+  - packages/api/modules/anismile/procedures/settings.ts
+  - packages/database/prisma/index.ts
+  - modules/admin/components/OrderTable.tsx
+  - packages/api/modules/anismile/lib/opencc.ts
+  - .spectra.yaml
+  - packages/database/prisma/queries/users.ts
+  - app/api/[[...rest]]/route.ts
+  - modules/detail/ProductDetailPage.tsx
+  - modules/shared/components/PublicHeader.tsx
+  - modules/catalog/components/PriceDisplay.tsx
+  - packages/auth/auth.ts
+  - tooling/scripts/src/am-catalog-visibility-lib.ts
+  - modules/catalog/CategoryPage.tsx
+  - packages/api/modules/anismile/router.ts
+  - tooling/scripts/package.json
+  - packages/database/prisma/migrations/20260605042800_add_anismile_series_table/migration.sql
+  - app/(public)/products/[id]/page.tsx
+  - packages/api/modules/anismile/lib/r2-image-cache.ts
+  - app/(authenticated)/checkout/success/page.tsx
+  - app/api/webhooks/stripe/route.ts
+  - modules/home/components/AnnouncementBanner.tsx
+  - CLAUDE.md
+  - modules/admin/AdminCustomersPage.tsx
+  - public/demo-gap-analysis.html
+  - tooling/scripts/src/create-user.ts
+  - modules/admin/DashboardPage.tsx
+  - app/(authenticated)/layout.tsx
+  - modules/catalog/SeriesDetailPage.tsx
+  - packages/sync/src/crawler.ts
+  - app/(authenticated)/admin/sync/page.tsx
+  - config.ts
+  - packages/api/orpc/procedures.ts
+  - app/(public)/search/page.tsx
+  - modules/catalog/components/SearchResultTable.tsx
+  - packages/database/index.ts
+  - .env.example
+  - modules/home/components/InstockSection.tsx
+  - tooling/scripts/src/test-db.ts
+  - modules/home/components/DeadlineSection.tsx
+  - AGENTS.md
+  - modules/admin/components/EditProductModal.tsx
+  - packages/api/modules/anismile/lib/crawler.ts
+  - packages/api/modules/anismile/procedures/cart.ts
+  - modules/catalog/components/FeaturedCarousel.tsx
+  - modules/catalog/components/SeriesCard.tsx
+  - packages/database/prisma/queries/index.ts
+  - app/(authenticated)/admin/page.tsx
+  - modules/admin/AdminSettingsPage.tsx
+  - packages/database/prisma/zod/index.ts
+  - packages/api/modules/anismile/procedures/orders.ts
+  - modules/catalog/components/NewArrivalsScroll.tsx
+  - modules/detail/components/ImageGallery.tsx
+  - modules/catalog/components/TableView.tsx
+  - modules/orders/components/OrderCard.tsx
+  - packages/database/prisma/queries/backsolve-pricing.ts
+  - modules/admin/AdminProductsPage.tsx
+  - app/(authenticated)/admin/settings/page.tsx
+  - packages/database/prisma/seed-anismile.ts
+  - modules/catalog/components/ProductCard.tsx
+  - packages/api/modules/anismile/procedures/products.ts
+  - package.json
+  - packages/api/package.json
+  - packages/api/modules/anismile/procedures/product-pool.ts
+  - GEMINI.md
+  - modules/shared/lib/public-prefetch.ts
+  - app/api/cron.ts
+  - packages/api/modules/anismile/lib/series-sync.ts
+  - modules/cart/components/CartItem.tsx
+  - modules/shared/components/SafeImage.tsx
+  - packages/api/modules/anismile/procedures/import-order.ts
+  - modules/member/MemberTierPage.tsx
+  - modules/catalog/SearchPage.tsx
+  - app/(public)/page.tsx
+  - packages/database/image-utils.ts
+  - tsconfig.json
+  - app/(authenticated)/admin/orders/page.tsx
+  - tooling/scripts/src/repair-anismile-pricing-truth.ts
+  - modules/orders/OrderDetailPage.tsx
+  - packages/database/prisma/schema.prisma
+  - scripts/fix-simplified-chinese.ts
+  - modules/home/HomePage.tsx
+  - pnpm-workspace.yaml
+  - tooling/scripts/src/am-catalog-visibility-probe.ts
+  - packages/api/modules/anismile/procedures/sync.ts
+tests:
+  - packages/api/modules/anismile/procedures/homepage.test.ts
+  - packages/api/modules/anismile/procedures/homepage-series-visibility.test.ts
+  - e2e/visual-diff.spec.ts
+  - modules/catalog/series-detail-page.test.ts
+  - tooling/scripts/src/am-catalog-visibility-lib.test.ts
+  - packages/api/modules/anismile/procedures/product-sync-protection.test.ts
+  - packages/database/prisma/queries/anismile-series-migration.test.ts
+  - app/api/cron-safety.test.ts
+  - packages/api/modules/anismile/procedures/backsolve-pricing-contract.test.ts
+  - packages/database/prisma/queries/anismile-search-filters.test.ts
+  - app/api/route-removal.test.ts
+  - packages/database/prisma/queries/anismile.backsolve-pricing.test.ts
+  - packages/api/modules/anismile/lib/crawler.test.ts
+  - modules/catalog/components/series-card.test.ts
+  - packages/database/prisma/queries/anismile-series-exact-match.test.ts
+  - modules/admin/admin-settings-backsolve-percent.test.ts
+  - e2e/search-reference-parity.spec.ts
+  - modules/home/components/deadline-section.test.ts
+  - packages/api/modules/anismile/procedures/public-pricing-visibility.test.ts
+  - modules/detail/product-detail-page.test.ts
+  - packages/api/modules/anismile/procedures/code-review-remediation.test.ts
+  - modules/admin/admin-products-page.test.ts
+  - modules/catalog/components/product-card.test.ts
+  - packages/api/modules/anismile/procedures/public-catalog-visibility.test.ts
+  - packages/api/orpc/procedures.test.ts
+  - modules/catalog/search-page.test.ts
+  - modules/catalog/components/table-view.test.ts
+  - packages/api/modules/anismile/procedures/product-source-auth-refresh.test.ts
+  - packages/api/modules/anismile/procedures/tier-settings-sync-contract.test.ts
+  - packages/database/prisma/queries/anismile-search-japanese-visibility.test.ts
+  - modules/home/home-page-performance.test.tsx
+  - packages/auth/customer-role-contract.test.ts
+  - modules/catalog/search-page-performance.test.tsx
+  - modules/shared/components/public-header.test.ts
+-->
+
+---
+### Requirement: Admin settings separates notification access from super-admin controls
+Admin settings SHALL allow admins to manage notification settings while keeping role management and default markup controls super-admin only.
+
+#### Scenario: Admin opens settings
+- **WHEN** a user with role `admin` opens settings
+- **THEN** notification settings are available
+- **AND** role management and default markup controls are hidden.
+
+<!-- @trace
+source: anismile-code-review-remediation
+updated: 2026-06-05
+code:
+  - modules/catalog/CatalogPage.tsx
+  - app/(public)/series/[id]/page.tsx
+  - packages/database/drizzle/queries/users.ts
+  - packages/api/modules/anismile/procedures/homepage.ts
+  - packages/database/prisma/queries/anismile.ts
+  - modules/orders/OrdersPage.tsx
+  - modules/shared/components/AppNav.tsx
+  - packages/api/modules/anismile/procedures/settings.ts
+  - packages/database/prisma/index.ts
+  - modules/admin/components/OrderTable.tsx
+  - packages/api/modules/anismile/lib/opencc.ts
+  - .spectra.yaml
+  - packages/database/prisma/queries/users.ts
+  - app/api/[[...rest]]/route.ts
+  - modules/detail/ProductDetailPage.tsx
+  - modules/shared/components/PublicHeader.tsx
+  - modules/catalog/components/PriceDisplay.tsx
+  - packages/auth/auth.ts
+  - tooling/scripts/src/am-catalog-visibility-lib.ts
+  - modules/catalog/CategoryPage.tsx
+  - packages/api/modules/anismile/router.ts
+  - tooling/scripts/package.json
+  - packages/database/prisma/migrations/20260605042800_add_anismile_series_table/migration.sql
+  - app/(public)/products/[id]/page.tsx
+  - packages/api/modules/anismile/lib/r2-image-cache.ts
+  - app/(authenticated)/checkout/success/page.tsx
+  - app/api/webhooks/stripe/route.ts
+  - modules/home/components/AnnouncementBanner.tsx
+  - CLAUDE.md
+  - modules/admin/AdminCustomersPage.tsx
+  - public/demo-gap-analysis.html
+  - tooling/scripts/src/create-user.ts
+  - modules/admin/DashboardPage.tsx
+  - app/(authenticated)/layout.tsx
+  - modules/catalog/SeriesDetailPage.tsx
+  - packages/sync/src/crawler.ts
+  - app/(authenticated)/admin/sync/page.tsx
+  - config.ts
+  - packages/api/orpc/procedures.ts
+  - app/(public)/search/page.tsx
+  - modules/catalog/components/SearchResultTable.tsx
+  - packages/database/index.ts
+  - .env.example
+  - modules/home/components/InstockSection.tsx
+  - tooling/scripts/src/test-db.ts
+  - modules/home/components/DeadlineSection.tsx
+  - AGENTS.md
+  - modules/admin/components/EditProductModal.tsx
+  - packages/api/modules/anismile/lib/crawler.ts
+  - packages/api/modules/anismile/procedures/cart.ts
+  - modules/catalog/components/FeaturedCarousel.tsx
+  - modules/catalog/components/SeriesCard.tsx
+  - packages/database/prisma/queries/index.ts
+  - app/(authenticated)/admin/page.tsx
+  - modules/admin/AdminSettingsPage.tsx
+  - packages/database/prisma/zod/index.ts
+  - packages/api/modules/anismile/procedures/orders.ts
+  - modules/catalog/components/NewArrivalsScroll.tsx
+  - modules/detail/components/ImageGallery.tsx
+  - modules/catalog/components/TableView.tsx
+  - modules/orders/components/OrderCard.tsx
+  - packages/database/prisma/queries/backsolve-pricing.ts
+  - modules/admin/AdminProductsPage.tsx
+  - app/(authenticated)/admin/settings/page.tsx
+  - packages/database/prisma/seed-anismile.ts
+  - modules/catalog/components/ProductCard.tsx
+  - packages/api/modules/anismile/procedures/products.ts
+  - package.json
+  - packages/api/package.json
+  - packages/api/modules/anismile/procedures/product-pool.ts
+  - GEMINI.md
+  - modules/shared/lib/public-prefetch.ts
+  - app/api/cron.ts
+  - packages/api/modules/anismile/lib/series-sync.ts
+  - modules/cart/components/CartItem.tsx
+  - modules/shared/components/SafeImage.tsx
+  - packages/api/modules/anismile/procedures/import-order.ts
+  - modules/member/MemberTierPage.tsx
+  - modules/catalog/SearchPage.tsx
+  - app/(public)/page.tsx
+  - packages/database/image-utils.ts
+  - tsconfig.json
+  - app/(authenticated)/admin/orders/page.tsx
+  - tooling/scripts/src/repair-anismile-pricing-truth.ts
+  - modules/orders/OrderDetailPage.tsx
+  - packages/database/prisma/schema.prisma
+  - scripts/fix-simplified-chinese.ts
+  - modules/home/HomePage.tsx
+  - pnpm-workspace.yaml
+  - tooling/scripts/src/am-catalog-visibility-probe.ts
+  - packages/api/modules/anismile/procedures/sync.ts
+tests:
+  - packages/api/modules/anismile/procedures/homepage.test.ts
+  - packages/api/modules/anismile/procedures/homepage-series-visibility.test.ts
+  - e2e/visual-diff.spec.ts
+  - modules/catalog/series-detail-page.test.ts
+  - tooling/scripts/src/am-catalog-visibility-lib.test.ts
+  - packages/api/modules/anismile/procedures/product-sync-protection.test.ts
+  - packages/database/prisma/queries/anismile-series-migration.test.ts
+  - app/api/cron-safety.test.ts
+  - packages/api/modules/anismile/procedures/backsolve-pricing-contract.test.ts
+  - packages/database/prisma/queries/anismile-search-filters.test.ts
+  - app/api/route-removal.test.ts
+  - packages/database/prisma/queries/anismile.backsolve-pricing.test.ts
+  - packages/api/modules/anismile/lib/crawler.test.ts
+  - modules/catalog/components/series-card.test.ts
+  - packages/database/prisma/queries/anismile-series-exact-match.test.ts
+  - modules/admin/admin-settings-backsolve-percent.test.ts
+  - e2e/search-reference-parity.spec.ts
+  - modules/home/components/deadline-section.test.ts
+  - packages/api/modules/anismile/procedures/public-pricing-visibility.test.ts
+  - modules/detail/product-detail-page.test.ts
+  - packages/api/modules/anismile/procedures/code-review-remediation.test.ts
+  - modules/admin/admin-products-page.test.ts
+  - modules/catalog/components/product-card.test.ts
+  - packages/api/modules/anismile/procedures/public-catalog-visibility.test.ts
+  - packages/api/orpc/procedures.test.ts
+  - modules/catalog/search-page.test.ts
+  - modules/catalog/components/table-view.test.ts
+  - packages/api/modules/anismile/procedures/product-source-auth-refresh.test.ts
+  - packages/api/modules/anismile/procedures/tier-settings-sync-contract.test.ts
+  - packages/database/prisma/queries/anismile-search-japanese-visibility.test.ts
+  - modules/home/home-page-performance.test.tsx
+  - packages/auth/customer-role-contract.test.ts
+  - modules/catalog/search-page-performance.test.tsx
+  - modules/shared/components/public-header.test.ts
+-->
