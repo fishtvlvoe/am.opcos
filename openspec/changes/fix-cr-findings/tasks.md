@@ -12,11 +12,11 @@ verification.
 
 ## 1. R2 Key 碰撞修復
 
-- [ ] 1.1 實作 R2 series image key is collision-free：`slugifySeriesName`（`packages/api/modules/anismile/lib/r2-image-cache.ts`）改用 SHA-1 hex 前 16 碼（r2 key 改用 sha-1 hash（取代 regex slug）；R2 key 格式：`series/<16-hex>.jpg`），讓日文系列名稱產生不重複的 R2 key。驗證：新增單元測試確認 `getR2Key("鬼滅の刃") !== getR2Key("ワンピース")` 且兩者都不等於 `"series/.jpg"`
+- [x] 1.1 實作 R2 series image key is collision-free：`slugifySeriesName`（`packages/api/modules/anismile/lib/r2-image-cache.ts`）改用 SHA-1 hex 前 16 碼（r2 key 改用 sha-1 hash（取代 regex slug）；R2 key 格式：`series/<16-hex>.jpg`），讓日文系列名稱產生不重複的 R2 key。驗證：新增單元測試確認 `getR2Key("鬼滅の刃") !== getR2Key("ワンピース")` 且兩者都不等於 `"series/.jpg"`
 
 ## 2. seriesImageMap 雙 key 正規化
 
-- [ ] 2.1 實作 Series image map lookup tolerates simplified-to-traditional variation：`getDbSeriesImageMap`（`packages/database/image-utils.ts`）採用 seriesImageMap 雙 key 策略（正規化 key 與原始 key 並存），對每個系列名稱同時存入原始名稱與 `toTraditionalChinese` 轉換後的繁體名稱，兩者都指向同一個 imageUrl；若轉換結果相同則只存一筆。需 import `toTraditionalChinese` from `packages/api/modules/anismile/lib/opencc`。驗證：新增單元測試確認 `map.get("截單")` 和 `map.get("截单")` 都回傳相同 imageUrl
+- [x] 2.1 實作 Series image map lookup tolerates simplified-to-traditional variation：`getDbSeriesImageMap`（`packages/database/image-utils.ts`）採用 seriesImageMap 雙 key 策略（正規化 key 與原始 key 並存），對每個系列名稱同時存入原始名稱與 `toTraditionalChinese` 轉換後的繁體名稱，兩者都指向同一個 imageUrl；若轉換結果相同則只存一筆。需 import `toTraditionalChinese` from `packages/api/modules/anismile/lib/opencc`。驗證：新增單元測試確認 `map.get("截單")` 和 `map.get("截单")` 都回傳相同 imageUrl
 
 ## 3. 圖片顯示修復（並行）
 

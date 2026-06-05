@@ -1,3 +1,4 @@
+import { generateSeriesVariants } from "@repo/utils";
 import { db } from "./prisma/client";
 
 const ANISMILE_ORIGIN = "https://www.anismile.jp";
@@ -77,7 +78,16 @@ async function getDbSeriesImageMap(): Promise<Map<string, string>> {
 		where: { imageUrl: { not: null } },
 		select: { name: true, imageUrl: true },
 	});
-	return new Map(seriesList.map((s) => [s.name, s.imageUrl!]));
+	// 雙 key 策略：同時存入原始名稱（DB 中通常為簡體）與所有異體字變體（含繁體）
+	// 確保 map.get("截單") 與 map.get("截单") 都能命中相同 imageUrl
+	const map = new Map<string, string>();
+	for (const s of seriesList) {
+		const url = s.imageUrl!;
+		for (const variant of generateSeriesVariants(s.name)) {
+			map.set(variant, url);
+		}
+	}
+	return map;
 }
 
 export async function getSourceSeriesImageMap() {
