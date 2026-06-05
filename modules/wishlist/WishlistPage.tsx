@@ -122,7 +122,7 @@ export function WishlistPage() {
 
 							{/* 商品圖片 + 名稱 + 價格（可點擊進商品頁）*/}
 							<Link href={`/products/${item.productId}`} className="block">
-								<div className="aspect-square overflow-hidden bg-muted">
+								<div className="relative aspect-square overflow-hidden bg-muted">
 									{item.product.imageUrls ? (
 										<Image
 											src={
