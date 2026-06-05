@@ -86,7 +86,7 @@ describe("parseProductApi — new field extraction", () => {
 		expect(result?.inStock).toBe(false);
 	});
 
-	it("falls back to price_percent when percent.status !== 1", () => {
+	it("uses price_percent as primary source", () => {
 		const res = {
 			code: 1,
 			item: { ...BASE_ITEM, percent: { status: 0, percent: "85.00" }, price_percent: "70" },
@@ -96,10 +96,21 @@ describe("parseProductApi — new field extraction", () => {
 		expect(result?.costPrice).toBe(700); // 1000 * 70 / 100 = 700
 	});
 
-	it("ignores price_percent when percent.status === 1", () => {
+	it("prefers price_percent even when percent.status === 1", () => {
 		const res = {
 			code: 1,
 			item: { ...BASE_ITEM, percent: { status: 1, percent: "85.00" }, price_percent: "70" },
+		};
+		const result = parseProductApiForTest(res);
+		// price_percent is primary: 70 wins over 85
+		expect(result?.discountRate).toBe(70);
+		expect(result?.costPrice).toBe(700); // 1000 * 70 / 100 = 700
+	});
+
+	it("falls back to item.percent when price_percent is absent", () => {
+		const res = {
+			code: 1,
+			item: { ...BASE_ITEM, percent: { status: 1, percent: "85.00" } },
 		};
 		const result = parseProductApiForTest(res);
 		expect(result?.discountRate).toBe(85);

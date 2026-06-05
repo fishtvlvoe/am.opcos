@@ -359,12 +359,19 @@ function parseProductApi(
 	const originalPrice = Number.parseFloat(item.price);
 	if (!Number.isFinite(originalPrice) || originalPrice <= 0) return null;
 
-	let percentValue = item.percent?.status === 1 ? Number.parseFloat(item.percent.percent) : null;
-	// Fallback: anismile.jp uses price_percent as the actual cost ratio when percent.status !== 1
-	if (percentValue == null && item.price_percent != null) {
+	// Primary: anismile.jp uses price_percent as the actual cost ratio.
+	// Fallback: item.percent only when percent.status === 1 and price_percent is absent.
+	let percentValue: number | null = null;
+	if (item.price_percent != null) {
 		const pricePercentValue = Number.parseFloat(String(item.price_percent));
 		if (Number.isFinite(pricePercentValue) && pricePercentValue > 0 && pricePercentValue < 100) {
 			percentValue = pricePercentValue;
+		}
+	}
+	if (percentValue == null && item.percent?.status === 1) {
+		const fallbackValue = Number.parseFloat(item.percent.percent);
+		if (Number.isFinite(fallbackValue) && fallbackValue > 0 && fallbackValue < 100) {
+			percentValue = fallbackValue;
 		}
 	}
 	const costPrice = percentValue ? Math.round(originalPrice * percentValue) / 100 : originalPrice;
