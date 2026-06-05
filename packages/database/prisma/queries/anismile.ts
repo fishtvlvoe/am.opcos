@@ -297,17 +297,45 @@ export async function listAnismileProducts({
 			},
 			select: { id: true },
 		});
-		andConditions.push(
-			exactSeriesMatch
-				? {
-						series: {
-							in: seriesTerms,
+
+		const parts = series.split("・");
+		const ipPart = parts[0]?.trim();
+		const brandPart = parts[1]?.trim()?.replace("株式会社", "")?.replace("有限会社", "")?.trim();
+
+		const fallbackCondition: Prisma.AnismileProductWhereInput | null = (ipPart && brandPart)
+			? {
+					AND: [
+						{
+							OR: [
+								{ franchise: { contains: ipPart, mode: "insensitive" } },
+								{ franchise: { contains: ipPart.replaceAll("？", "?").replaceAll("?", "？"), mode: "insensitive" } }
+							]
 						},
-					}
-				: {
-						OR: seriesTerms.map((term) => ({ series: { startsWith: term } })),
-					},
-		);
+						{
+							OR: [
+								{ brand: { contains: brandPart, mode: "insensitive" } },
+								{ titleOriginal: { contains: brandPart, mode: "insensitive" } },
+								{ titleTranslated: { contains: brandPart, mode: "insensitive" } }
+							]
+						}
+					]
+				}
+			: null;
+
+		if (exactSeriesMatch) {
+			andConditions.push({
+				series: {
+					in: seriesTerms,
+				},
+			});
+		} else {
+			andConditions.push({
+				OR: [
+					...seriesTerms.map((term) => ({ series: { startsWith: term } })),
+					...(fallbackCondition ? [fallbackCondition] : []),
+				],
+			});
+		}
 	}
 
 	const where: Prisma.AnismileProductWhereInput = {
