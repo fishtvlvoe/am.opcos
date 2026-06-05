@@ -1,7 +1,6 @@
 import { db } from "../client";
 import { Prisma } from "../generated/client";
 import { calculateBacksolveSellingPrice } from "./backsolve-pricing";
-import { logger } from "@repo/logs";
 
 const DEFAULT_BACKSOLVE_PERCENT_KEY = "default_backsolve_percent";
 const DEFAULT_BACKSOLVE_PERCENT_VALUE = "0";
@@ -639,7 +638,7 @@ export async function upsertProductsFromSync(
 					existing.discountRate != null &&
 					Math.abs(product.discountRate / 100 - Number(existing.discountRate)) > 0.001;
 				if (newCostDiffers || newDiscountDiffers) {
-					logger.warn(
+					console.warn(
 						`[upsertProductsFromSync] Stale pricing preserved for ${product.supplierId}: ` +
 						`new crawl has cost=${product.costPrice}/discount=${product.discountRate}% ` +
 						`but existing is cost=${existing.costPrice}/discount=${existing.discountRate}. ` +
