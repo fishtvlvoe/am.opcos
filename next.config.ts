@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
 				protocol: "https",
 				hostname: "img.anismile.jp",
 			},
+			{
+				protocol: "https",
+				hostname: "*.r2.dev",
+			},
 		],
 	},
 	webpack: (config, { webpack, isServer }) => {
