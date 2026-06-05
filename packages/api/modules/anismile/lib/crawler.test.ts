@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { crawlAnismileProductsBySeriesName, parseProductApiForTest, parseProductEntriesFromSeriesPageForTest } from "./crawler";
+import { crawlAnismileProductsBySeriesName, parseProductApiForTest, parseProductEntriesFromSeriesPageForTest, normalizeSeriesLookup } from "./crawler";
 
 const BASE_ITEM = {
 	hash: "test001",
@@ -123,5 +123,12 @@ describe("series page product discovery", () => {
 		expect(source).toContain('.replaceAll("）", ")")');
 		expect(source).toContain('.replaceAll("　", " ")');
 		expect(source).toContain('.toLowerCase()');
+	});
+
+	it("normalizes Japanese and Traditional Chinese kanji variations", () => {
+		expect(normalizeSeriesLookup("薫る花は凜と咲く・Yline・6月21日截單"))
+			.toBe("薰る花は凛と咲く・yline・6月21日截单");
+		expect(normalizeSeriesLookup("薰る花は凛と咲く・Yline・6月21日截單"))
+			.toBe("薰る花は凛と咲く・yline・6月21日截单");
 	});
 });

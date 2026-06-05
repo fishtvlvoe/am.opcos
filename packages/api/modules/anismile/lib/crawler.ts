@@ -255,13 +255,15 @@ async function getHomepageProductEntries(): Promise<ProductEntry[]> {
 	});
 }
 
-function normalizeSeriesLookup(value: string) {
+export function normalizeSeriesLookup(value: string) {
 	return value
 		.replaceAll("截單", "截单")
 		.replaceAll("！", "!")
 		.replaceAll("（", "(")
 		.replaceAll("）", ")")
 		.replaceAll("　", " ")
+		.replaceAll("薫", "薰")
+		.replaceAll("凜", "凛")
 		.toLowerCase()
 		.trim();
 }

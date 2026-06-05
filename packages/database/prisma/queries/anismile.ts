@@ -268,14 +268,23 @@ export async function listAnismileProducts({
 	}
 	if (series) {
 		const seriesRoot = series.split("・")[0] ?? series;
+		const generateVariants = (s: string) => {
+			const variants = [s];
+			variants.push(s.replaceAll("截單", "截单"));
+			variants.push(s.replaceAll("截单", "截單"));
+			variants.push(s.replaceAll("薫", "薰").replaceAll("凜", "凛"));
+			variants.push(s.replaceAll("薰", "薫").replaceAll("凛", "凜"));
+			variants.push(s.replaceAll("薫", "薰").replaceAll("凜", "凛").replaceAll("截單", "截单"));
+			variants.push(s.replaceAll("薰", "薫").replaceAll("凛", "凜").replaceAll("截單", "截单"));
+			variants.push(s.replaceAll("薫", "薰").replaceAll("凜", "凛").replaceAll("截单", "截單"));
+			variants.push(s.replaceAll("薰", "薫").replaceAll("凛", "凜").replaceAll("截单", "截單"));
+			variants.push(s.replaceAll("！", "!"));
+			return variants;
+		};
 		const seriesTerms = Array.from(
 			new Set([
-				series,
-				series.replaceAll("截單", "截单"),
-				series.replaceAll("截单", "截單"),
-				series.replaceAll("！", "!"),
-				seriesRoot,
-				seriesRoot.replaceAll("！", "!"),
+				...generateVariants(series),
+				...generateVariants(seriesRoot),
 			].filter(Boolean)),
 		);
 		const exactSeriesMatch = await db.anismileProduct.findFirst({
