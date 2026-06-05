@@ -146,6 +146,12 @@ export async function runSync(): Promise<SyncResult> {
 			logger.warn("[sync] series list sync error:", seriesError);
 		}
 
+		// Discount rate statistics for monitoring
+		const allCrawledProducts = [...priorityCrawlResult.products, ...crawlResult.products];
+		const withDiscount = allCrawledProducts.filter((p) => p.discountRate != null).length;
+		const withoutDiscount = allCrawledProducts.length - withDiscount;
+		const discountRatio = allCrawledProducts.length > 0 ? withDiscount / allCrawledProducts.length : 0;
+
 		await finishSyncLog({
 			id: syncLog.id,
 			status: "completed",
@@ -157,7 +163,9 @@ export async function runSync(): Promise<SyncResult> {
 			errorMessage:
 				[...priorityCrawlResult.failureReasons, ...crawlResult.failureReasons].length > 0
 					? [...priorityCrawlResult.failureReasons, ...crawlResult.failureReasons].slice(0, 20).join("\n")
-					: undefined,
+					: discountRatio < 0.1 && allCrawledProducts.length > 0
+						? `[discount-alert] Only ${(discountRatio * 100).toFixed(1)}% of crawled products have a discountRate. Check if anismile.jp API discount field is being captured correctly.`
+						: undefined,
 		});
 
 		const nextOffset =
@@ -167,7 +175,8 @@ export async function runSync(): Promise<SyncResult> {
 		await setSyncCursor(nextOffset);
 
 		logger.info(
-			`[sync] completed priority=${priorityResult.productsSynced} and batch offset=${batchOffset} next=${nextOffset}: ${result.productsSynced} products (${result.productsAdded} added, ${result.productsUpdated} updated, ${result.productsSkipped + crawlResult.productsSkipped} skipped, ${crawlResult.productsFailed} failed)`,
+			`[sync] completed priority=${priorityResult.productsSynced} and batch offset=${batchOffset} next=${nextOffset}: ${result.productsSynced} products (${result.productsAdded} added, ${result.productsUpdated} updated, ${result.productsSkipped + crawlResult.productsSkipped} skipped, ${crawlResult.productsFailed} failed). ` +
+			`Discount stats: ${withDiscount} with discount, ${withoutDiscount} without (${(discountRatio * 100).toFixed(1)}%).`,
 		);
 
 		return {

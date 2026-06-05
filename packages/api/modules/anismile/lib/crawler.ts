@@ -359,7 +359,14 @@ function parseProductApi(
 	const originalPrice = Number.parseFloat(item.price);
 	if (!Number.isFinite(originalPrice) || originalPrice <= 0) return null;
 
-	const percentValue = item.percent?.status === 1 ? Number.parseFloat(item.percent.percent) : null;
+	let percentValue = item.percent?.status === 1 ? Number.parseFloat(item.percent.percent) : null;
+	// Fallback: anismile.jp uses price_percent as the actual cost ratio when percent.status !== 1
+	if (percentValue == null && item.price_percent != null) {
+		const pricePercentValue = Number.parseFloat(String(item.price_percent));
+		if (Number.isFinite(pricePercentValue) && pricePercentValue > 0 && pricePercentValue < 100) {
+			percentValue = pricePercentValue;
+		}
+	}
 	const costPrice = percentValue ? Math.round(originalPrice * percentValue) / 100 : originalPrice;
 	if (costPrice <= 0) return null;
 
@@ -374,7 +381,7 @@ function parseProductApi(
 	const series = item.bundles?.name ?? null;
 	// work_title[0] は作品/IP 名称（franchise）であって商品カテゴリではない
 	const franchise = item.work_title?.[0] ?? null;
-	const discountRate = item.percent?.status === 1 ? Number.parseFloat(item.percent.percent) : null;
+	const discountRate = percentValue;
 	const brand = item.manufacturer?.name || null;
 	const janCode = item.jancode ?? null;
 	const releaseDate = parseReleaseDate(item.release_date);
@@ -478,7 +485,20 @@ export async function crawlAnismileProductsWithStats({
 		}),
 	);
 
-	logger.info(`[anismile] crawl complete: ${products.length}/${productEntries.length} products`);
+	// Data quality validation: warn if too few products have discount rates
+	const productsWithDiscount = products.filter((p) => p.discountRate != null).length;
+	const discountRatio = products.length > 0 ? productsWithDiscount / products.length : 0;
+	if (discountRatio < 0.1 && products.length > 0) {
+		logger.warn(
+			`[anismile] crawl validation: only ${(discountRatio * 100).toFixed(1)}% of ${products.length} products have a discountRate. ` +
+			`This may indicate the source API discount field (price_percent) is not being captured correctly.`,
+		);
+	}
+
+	logger.info(
+		`[anismile] crawl complete: ${products.length}/${productEntries.length} products ` +
+		`(${productsWithDiscount} with discount, ${products.length - productsWithDiscount} without)`,
+	);
 	return {
 		products,
 		totalDiscovered: allProductEntries.length,

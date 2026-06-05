@@ -1,10 +1,15 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
-const R2_ENDPOINT = process.env.S3_ENDPOINT;
-const R2_ACCESS_KEY_ID = process.env.S3_ACCESS_KEY_ID;
-const R2_SECRET_ACCESS_KEY = process.env.S3_SECRET_ACCESS_KEY;
-const R2_BUCKET_NAME = process.env.NEXT_PUBLIC_AVATARS_BUCKET_NAME || "fishtv";
-const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "https://pub-5ec21b01ebe8403c850311d4ddf55acd.r2.dev";
+function cleanEnvVar(value: string | undefined): string | undefined {
+	if (!value) return undefined;
+	return value.trim().replace(/\\n$/, "").trim();
+}
+
+const R2_ENDPOINT = cleanEnvVar(process.env.S3_ENDPOINT);
+const R2_ACCESS_KEY_ID = cleanEnvVar(process.env.S3_ACCESS_KEY_ID);
+const R2_SECRET_ACCESS_KEY = cleanEnvVar(process.env.S3_SECRET_ACCESS_KEY);
+const R2_BUCKET_NAME = cleanEnvVar(process.env.NEXT_PUBLIC_AVATARS_BUCKET_NAME) || "fishtv";
+const R2_PUBLIC_URL = cleanEnvVar(process.env.NEXT_PUBLIC_R2_PUBLIC_URL) || "https://pub-5ec21b01ebe8403c850311d4ddf55acd.r2.dev";
 
 const r2Client =
 	R2_ENDPOINT && R2_ACCESS_KEY_ID && R2_SECRET_ACCESS_KEY
