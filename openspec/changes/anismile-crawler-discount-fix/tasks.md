@@ -44,6 +44,6 @@
 ## Wave 4 — 驗收
 
 - [x] 執行 `pnpm --filter @repo/api test` 確認全綠（crawler.test.ts 全過，其餘失敗為既有問題）
-- [ ] 執行 `pnpm type-check` 確認無型別錯誤
-- [ ] 執行 `pnpm build` 確認成功
+- [x] 執行 `pnpm type-check` 確認無型別錯誤
+- [x] 執行 `pnpm build` 確認成功
 - [x] `git add`、`git commit -m "fix(anismile): use price_percent as primary discount source"`
