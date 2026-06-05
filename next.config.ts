@@ -20,6 +20,11 @@ const nextConfig: NextConfig = {
 				hostname: "*.r2.dev",
 			},
 		],
+		localPatterns: [
+			{
+				pathname: "/api/image-proxy/**",
+			},
+		],
 	},
 	webpack: (config, { webpack, isServer }) => {
 		config.plugins.push(
