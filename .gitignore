@@ -64,7 +64,6 @@ graphify-out/
 .cursor/
 .cursorrules
 .gemini/
-.github/
 .opencode/
 .tmp.live.env
 e2e/visual-diff-report.json
