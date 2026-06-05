@@ -21,6 +21,11 @@ export function SafeImage({ src, alt, fill, width, height, priority, sizes, clas
 	const [loaded, setLoaded] = useState(false);
 	const [error, setError] = useState(false);
 
+	const displaySrc =
+		src.startsWith("https://img.anismile.jp/") || src.startsWith("https://www.anismile.jp/")
+			? `/api/image-proxy?url=${encodeURIComponent(src)}`
+			: src;
+
 	if (error) {
 		return (
 			<div className={`flex items-center justify-center bg-stone-100 ${fill ? "size-full" : ""}`} style={!fill ? { width, height } : undefined}>
@@ -31,7 +36,7 @@ export function SafeImage({ src, alt, fill, width, height, priority, sizes, clas
 
 	return (
 		<Image
-			src={src}
+			src={displaySrc}
 			alt={alt}
 			fill={fill}
 			width={!fill ? width : undefined}
