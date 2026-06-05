@@ -1504,7 +1504,8 @@ export async function searchAnismileProducts({
 	const urgentEnd = new Date(today);
 	urgentEnd.setDate(urgentEnd.getDate() + 7);
 	const includeUnavailableMatches = filters?.showUnavailable === true;
-	const onlyInStock = filters?.inStock === true;
+	// 預設只顯示在架商品（inStock: true），除非明確傳入 inStock: false 才顯示全部
+	const inStockFilter = filters?.inStock === false ? undefined : true;
 
 	function buildSearchWhere({ showUnavailable }: { showUnavailable: boolean }): Prisma.AnismileProductWhereInput {
 		const andConditions: Prisma.AnismileProductWhereInput[] = [];
@@ -1530,7 +1531,7 @@ export async function searchAnismileProducts({
 		);
 
 		return {
-			inStock: onlyInStock ? true : undefined,
+			inStock: inStockFilter,
 			...(filters?.category ? { category: filters.category } : {}),
 			...(filters?.franchise ? { franchise: filters.franchise } : {}),
 			...(filters?.brand ? { brand: filters.brand } : {}),

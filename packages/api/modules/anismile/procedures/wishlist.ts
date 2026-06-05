@@ -89,7 +89,7 @@ export const listWishlist = protectedProcedure
 				? { createdAt: "desc" as const }
 				: input.sort === "oldest"
 					? { createdAt: "asc" as const }
-					: { product: { listingDate: "asc" as const } }; // deadline = 上架日
+					: { product: { orderDeadline: "asc" as const } }; // deadline = 截單日
 
 		const items = await db.anismileWishlistItem.findMany({
 			where: { userId: user.id },
@@ -193,10 +193,11 @@ export const batchAddToCart = protectedProcedure
 				quantity: { gt: 0 },
 			},
 			include: {
-				product: { select: { id: true, inStock: true } },
+				product: { select: { id: true, inStock: true, orderDeadline: true } },
 			},
 		});
 
+		const today = new Date();
 		const skipped: string[] = [];
 		let added = 0;
 
@@ -204,6 +205,15 @@ export const batchAddToCart = protectedProcedure
 			for (const item of wishlistItems) {
 				// 商品缺貨時跳過
 				if (!item.product.inStock) {
+					skipped.push(item.productId);
+					continue;
+				}
+
+				// 已過截單日時跳過
+				if (
+					item.product.orderDeadline &&
+					item.product.orderDeadline < today
+				) {
 					skipped.push(item.productId);
 					continue;
 				}

@@ -440,6 +440,7 @@ export const getProductsByDate = publicProcedure
 					titleTranslated: true,
 					janCode: true,
 					imageUrls: true,
+					series: true,
 					listingDate: true,
 					orderDeadline: true,
 					category: true,
@@ -450,6 +451,8 @@ export const getProductsByDate = publicProcedure
 				take: 20,
 			});
 
+			const seriesImageMap = await getSourceSeriesImageMap();
+
 			return {
 				products: products.map((p) => ({
 					id: p.id,
@@ -457,7 +460,7 @@ export const getProductsByDate = publicProcedure
 					janCode: p.janCode,
 					originalPrice: p.originalPrice ? p.originalPrice.toNumber() : null,
 					sellingPrice: p.sellingPrice ? publicPrice(p.sellingPrice.toNumber(), showPrices) : null,
-					imageUrls: p.imageUrls,
+					imageUrls: getDisplayImageUrls(p, seriesImageMap),
 					listingDate: p.listingDate?.toISOString() ?? null,
 					orderDeadline: p.orderDeadline?.toISOString() ?? null,
 					category: p.category,
@@ -628,7 +631,7 @@ export const getDeadlineList = publicProcedure
 					return {
 						id: `fallback-${seriesName}`,
 						name: seriesName,
-						imageUrl: urls[0] ?? "",
+						imageUrl: urls.find(url => !isPlaceholderImageUrl(url)) ?? "",
 						productCount: plist.length,
 						workTitle: first.franchise || "",
 						manufacturer: first.brand || "",

@@ -303,7 +303,7 @@ export async function crawlAnismileProductsBySeriesName(
 		const parsed = parseProductApi(res, id, authMode);
 		if (parsed) {
 			parsed.listingDate ??= listingDate;
-			parsed.series = series.name;
+			parsed.series = toTraditionalChinese(series.name);
 			products.push(parsed);
 		}
 	}

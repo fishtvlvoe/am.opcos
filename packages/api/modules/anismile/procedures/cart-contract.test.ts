@@ -17,6 +17,10 @@ const querySource = readFileSync(
 	rootFile("packages/database/prisma/queries/anismile.ts"),
 	"utf8",
 );
+const wishlistSource = readFileSync(
+	rootFile("packages/api/modules/anismile/procedures/wishlist.ts"),
+	"utf8",
+);
 
 describe("anismile cart contract", () => {
 	it("exposes cart API shape for addItem/getItems/updateQuantity/removeItem/checkout", () => {
@@ -35,5 +39,24 @@ describe("anismile cart contract", () => {
 	it("guards add-to-cart by order deadline", () => {
 		expect(querySource).toContain("orderDeadline");
 		expect(querySource).toContain("Product order deadline has passed");
+	});
+});
+
+describe("anismile batchAddToCart deadline guard", () => {
+	it("fetches orderDeadline in product select", () => {
+		// 確認 product select 包含 orderDeadline 欄位
+		expect(wishlistSource).toContain("orderDeadline: true");
+	});
+
+	it("skips items whose orderDeadline has passed", () => {
+		// 確認存在截單日比較邏輯
+		expect(wishlistSource).toContain("item.product.orderDeadline");
+		expect(wishlistSource).toContain("orderDeadline < today");
+	});
+
+	it("still skips out-of-stock items alongside deadline check", () => {
+		// 確認兩種跳過條件共存
+		expect(wishlistSource).toContain("item.product.inStock");
+		expect(wishlistSource).toContain("item.product.orderDeadline");
 	});
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const GRAY_BLUR =
 	"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSIzMCI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0iI2Y1ZjVmNCIvPjwvc3ZnPg==";
@@ -20,6 +20,12 @@ interface SafeImageProps {
 export function SafeImage({ src, alt, fill, width, height, priority, sizes, className = "" }: SafeImageProps) {
 	const [loaded, setLoaded] = useState(false);
 	const [error, setError] = useState(false);
+
+	// src 改變時重置 error / loaded，避免舊的 error state 擋住新圖片載入
+	useEffect(() => {
+		setError(false);
+		setLoaded(false);
+	}, [src]);
 
 	const displaySrc =
 		src.startsWith("https://img.anismile.jp/") || src.startsWith("https://www.anismile.jp/")

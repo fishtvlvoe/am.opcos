@@ -1,4 +1,4 @@
-import { db } from "@repo/database";
+import { db, normalizeSourceImageUrl } from "@repo/database";
 
 import { isR2Configured, syncSeriesImageToR2 } from "./r2-image-cache";
 
@@ -13,15 +13,6 @@ interface SourceSeriesItem {
 interface SourceSeriesResponse {
 	code: number;
 	items?: SourceSeriesItem[];
-}
-
-function normalizeSourceImageUrl(url: string | undefined) {
-	if (!url) return "";
-	if (url.startsWith("/files/")) return `https://img.anismile.jp${url}`;
-	if (url.startsWith(`${ANISMILE_ORIGIN}/files/`)) {
-		return url.replace(`${ANISMILE_ORIGIN}/files/`, "https://img.anismile.jp/files/");
-	}
-	return url;
 }
 
 export async function fetchSourceSeriesList(): Promise<

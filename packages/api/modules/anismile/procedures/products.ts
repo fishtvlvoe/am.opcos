@@ -541,13 +541,13 @@ export const batchPatchProducts = anismileAdminProcedure
 		await db.$transaction(
 			products.map((product) => {
 				const data: {
-					discountRate?: number | null;
+					discountRate?: Prisma.Decimal | null;
 					markupOverride?: number | null;
 					priceManualOverride?: boolean;
 					sellingPrice?: ReturnType<typeof calculateBacksolveSellingPrice>;
 				} = {};
 				if (input.discountRate !== undefined) {
-					data.discountRate = input.discountRate;
+					data.discountRate = input.discountRate !== null ? new Prisma.Decimal(input.discountRate) : null;
 				}
 				if (input.markupOverride !== undefined) {
 					const backsolvePercent = input.markupOverride !== null

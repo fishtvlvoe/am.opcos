@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 function cleanEnvVar(value: string | undefined): string | undefined {
@@ -27,17 +28,9 @@ export function isR2Configured(): boolean {
 	return r2Client !== null;
 }
 
-function slugifySeriesName(name: string): string {
-	return name
-		.trim()
-		.replace(/[^\w\s-]/g, "")
-		.replace(/\s+/g, "-")
-		.toLowerCase()
-		.slice(0, 100);
-}
-
-function getR2Key(seriesName: string): string {
-	return `series/${slugifySeriesName(seriesName)}.jpg`;
+export function getR2Key(seriesName: string): string {
+	const hash = createHash("sha1").update(seriesName.trim()).digest("hex");
+	return `series/${hash.slice(0, 16)}.jpg`;
 }
 
 export function getR2PublicUrl(seriesName: string): string {

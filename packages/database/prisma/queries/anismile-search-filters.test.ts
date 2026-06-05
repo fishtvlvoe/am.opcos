@@ -26,7 +26,7 @@ describe("anismile public search filters and fallback sort", () => {
 		expect(source).toContain("inStock?: boolean");
 		expect(source).toContain("urgentDeadline?: boolean");
 		expect(source).toContain("const includeUnavailableMatches = filters?.showUnavailable === true");
-		expect(source).toContain("const onlyInStock = filters?.inStock === true");
+		expect(source).toContain("const inStockFilter = filters?.inStock === false ? undefined : true");
 		expect(source).toContain("filters?.urgentDeadline");
 		expect(source).toContain("series: { contains: normalizedQuery");
 	});

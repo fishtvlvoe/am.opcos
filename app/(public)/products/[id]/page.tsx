@@ -1,3 +1,5 @@
+import { notFound } from "next/navigation";
+
 import { getSession } from "@auth/lib/server";
 import { getAnismileProductById, toImageUrlArray } from "@repo/database";
 
@@ -26,7 +28,10 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
 
 	const product = await getAnismileProductById(id);
 	if (!product) {
-		return <div className="container py-12 text-center text-sm text-stone-500">商品不存在或已下架</div>;
+		notFound();
+	}
+	if (!product.inStock) {
+		notFound();
 	}
 
 	const imageUrls = toImageUrlArray(product.imageUrls);

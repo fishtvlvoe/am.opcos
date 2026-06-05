@@ -13,7 +13,7 @@ describe("anismile Japanese search visibility contract", () => {
 		expect(source).toContain("titleOriginal: { contains: normalizedQuery, mode: \"insensitive\" as const }");
 		expect(source).toContain("franchise: { contains: normalizedQuery, mode: \"insensitive\" as const }");
 		expect(source).toContain("const includeUnavailableMatches = filters?.showUnavailable === true");
-		expect(source).toContain("const onlyInStock = filters?.inStock === true");
+		expect(source).toContain("const inStockFilter = filters?.inStock === false ? undefined : true");
 		expect(source).toContain("if (!showUnavailable) {");
 	});
 });
